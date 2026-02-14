@@ -15,7 +15,7 @@ export default function BlogEditor(){
             TextAlign.configure({
               types: ['heading', 'paragraph'],
             }),
-            Highlight,
+            Highlight.configure({ multicolor: true }),
           ],
         content: `
             <h3 style="text-align:center">
@@ -45,6 +45,9 @@ export default function BlogEditor(){
           `,
         shouldRerenderOnTransaction: true,
         immediatelyRender: true,
+        onUpdate: ({ editor }) => {
+            console.log(editor.getHTML())
+        },
       })
 
     return (
