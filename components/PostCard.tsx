@@ -11,6 +11,7 @@
  */
 
 import Link from 'next/link'
+import { Clock, Calendar } from 'lucide-react'
 import { BlogPost } from '@/lib/types'
 
 interface PostCardProps {
@@ -39,35 +40,39 @@ function formatDate(iso: string): string {
 export default function PostCard({ post }: PostCardProps) {
   return (
     <Link href={`/post/${post.slug}`} className="block group">
-      <div className="border rounded-lg p-5 hover:border-primary/50 hover:shadow-sm transition-all">
-        {/* Title */}
-        <h2 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
-          {post.title}
-        </h2>
-
-        {/* Excerpt */}
-        <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
-          {post.excerpt}
-        </p>
-
-        {/* Footer: tags, date, reading time */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          {/* Tags */}
-          <div className="flex gap-1.5 flex-wrap">
+      <div className="h-full border border-border/80 rounded-xl p-6 bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
+        {/* Tags */}
+        {post.tags.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap mb-3">
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"
+                className="px-2.5 py-0.5 text-[11px] font-medium rounded-full bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary"
               >
                 {tag}
               </span>
             ))}
           </div>
+        )}
 
-          {/* Date & reading time */}
-          <div className="flex items-center gap-2 shrink-0">
+        {/* Title */}
+        <h2 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors leading-snug">
+          {post.title}
+        </h2>
+
+        {/* Excerpt */}
+        <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed">
+          {post.excerpt}
+        </p>
+
+        {/* Footer: date & reading time */}
+        <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border/60">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="size-3.5" />
             <time>{formatDate(post.createdAt)}</time>
-            <span>&middot;</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Clock className="size-3.5" />
             <span>{readingTime(post.content)}</span>
           </div>
         </div>

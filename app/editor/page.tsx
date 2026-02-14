@@ -14,7 +14,7 @@ export default function NewPostPage() {
   const router = useRouter()
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="max-w-4xl mx-auto py-10 px-6">
       <BlogEditor onPublish={(post) => router.push(`/post/${post.slug}`)} />
     </div>
   )

@@ -25,10 +25,10 @@ export default function TagFilter({ tags, selectedTags, onTagToggle }: TagFilter
           <button
             key={tag}
             onClick={() => onTagToggle(tag)}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+            className={`px-3.5 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
               isSelected
-                ? 'bg-primary text-primary-foreground'        // filled = active
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'  // outline = inactive
+                ? 'bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground border-primary shadow-sm shadow-primary/25'
+                : 'bg-card text-muted-foreground border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5'
             }`}
           >
             {tag}

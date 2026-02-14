@@ -13,6 +13,8 @@ import BlogEditor from '@/components/Editor/BlogEditor'
 import { storage } from '@/lib/storage'
 import { useRouter } from 'next/navigation'
 import { BlogPost } from '@/lib/types'
+import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
 export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -32,9 +34,17 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
   if (notFound) {
     return (
-      <div className="max-w-4xl mx-auto py-8 px-4 text-center">
+      <div className="max-w-4xl mx-auto py-24 px-6 text-center">
+        <div className="text-6xl mb-4 bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent font-bold">404</div>
         <h1 className="text-2xl font-bold mb-2">Post not found</h1>
-        <p className="text-muted-foreground">The post you&apos;re looking for doesn&apos;t exist.</p>
+        <p className="text-muted-foreground mb-6">The post you&apos;re looking for doesn&apos;t exist.</p>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
+        >
+          <ArrowLeft className="size-4" />
+          Back to home
+        </Link>
       </div>
     )
   }
@@ -43,7 +53,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   if (!post) return null
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="max-w-4xl mx-auto py-10 px-6">
       <BlogEditor
         postId={post.id}
         initialTitle={post.title}

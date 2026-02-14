@@ -17,6 +17,7 @@ import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
+import { Calendar, Clock, ArrowLeft, Pencil } from 'lucide-react'
 import { storage } from '@/lib/storage'
 import { BlogPost } from '@/lib/types'
 
@@ -59,12 +60,17 @@ export default function PostPage({ params }: { params: Promise<{ slug: string }>
 
   if (notFound) {
     return (
-      <div className="max-w-3xl mx-auto py-16 px-4 text-center">
+      <div className="max-w-3xl mx-auto py-24 px-6 text-center">
+        <div className="text-6xl mb-4 bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent font-bold">404</div>
         <h1 className="text-2xl font-bold mb-2">Post not found</h1>
-        <p className="text-muted-foreground mb-4">
+        <p className="text-muted-foreground mb-6">
           The post you are looking for doesn't exist.
         </p>
-        <Link href="/" className="text-primary underline">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
+        >
+          <ArrowLeft className="size-4" />
           Back to home
         </Link>
       </div>
@@ -74,48 +80,65 @@ export default function PostPage({ params }: { params: Promise<{ slug: string }>
   if (!post) return null
 
   return (
-    <article className="max-w-3xl mx-auto py-8 px-4">
+    <article className="max-w-3xl mx-auto py-10 px-6">
       {/* Post header */}
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
-
-        {/* Meta info: date, reading time, edit link */}
-        <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
-          <time>{formatDate(post.createdAt)}</time>
-          <span>&middot;</span>
-          <span>{readingTime(post.content)}</span>
-          <span>&middot;</span>
-          <Link href={`/editor/${post.id}`} className="text-primary hover:underline">
-            Edit
-          </Link>
-        </div>
-
+      <header className="mb-10">
         {/* Tags */}
         {post.tags.length > 0 && (
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap mb-4">
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-1 text-xs rounded-full bg-secondary text-secondary-foreground"
+                className="px-3 py-1 text-xs font-medium rounded-full bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary border border-primary/20"
               >
                 {tag}
               </span>
             ))}
           </div>
         )}
+
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-tight mb-5 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+          {post.title}
+        </h1>
+
+        {/* Meta info: date, reading time, edit link */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="size-4" />
+            <time>{formatDate(post.createdAt)}</time>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Clock className="size-4" />
+            <span>{readingTime(post.content)}</span>
+          </div>
+          <Link
+            href={`/editor/${post.id}`}
+            className="inline-flex items-center gap-1.5 text-primary hover:underline ml-auto"
+          >
+            <Pencil className="size-3.5" />
+            Edit
+          </Link>
+        </div>
       </header>
 
+      {/* Divider */}
+      <hr className="mb-10 border-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
       {/* Post content rendered from markdown */}
-      <div className="prose prose-neutral max-w-none">
+      <div className="prose prose-neutral max-w-none prose-headings:tracking-tight prose-headings:font-bold prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-pre:bg-muted prose-pre:border">
         <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
           {post.markdown}
         </ReactMarkdown>
       </div>
 
       {/* Back link */}
-      <div className="mt-12 pt-6 border-t">
-        <Link href="/" className="text-primary hover:underline">
-          &larr; Back to all posts
+      <div className="mt-14 pt-8 border-t border-primary/10">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors font-medium"
+        >
+          <ArrowLeft className="size-4" />
+          Back to all posts
         </Link>
       </div>
     </article>
