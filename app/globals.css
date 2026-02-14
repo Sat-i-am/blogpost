@@ -158,11 +158,22 @@
        font-size: 1.1rem;
      }
      /* List styles */
-    ul,
+    ul {
+      padding: 0 1rem;
+      margin: 1.25rem 1rem 1.25rem 0.4rem;
+      list-style-type: disc;
+
+      li p {
+        margin-top: 0.25em;
+        margin-bottom: 0.25em;
+      }
+    }
+
     ol {
       padding: 0 1rem;
       margin: 1.25rem 1rem 1.25rem 0.4rem;
-  
+      list-style-type: decimal;
+
       li p {
         margin-top: 0.25em;
         margin-bottom: 0.25em;
