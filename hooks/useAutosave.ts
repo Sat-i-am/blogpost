@@ -31,11 +31,10 @@ interface UseAutosaveOptions {
 
 /**
  * Strip HTML tags and return plain text. Used to generate excerpts.
+ * Uses regex instead of DOM to avoid "document is not defined" errors during SSR.
  */
 function stripHtml(html: string): string {
-  const div = document.createElement('div')
-  div.innerHTML = html
-  return div.textContent || ''
+  return html.replace(/<[^>]*>/g, '').trim()
 }
 
 export function useAutosave({ postId, content, title, tags, delay = 2000 }: UseAutosaveOptions) {
