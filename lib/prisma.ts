@@ -34,7 +34,7 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 // Step 3: Create the adapter with our Supabase connection string
 // The adapter connects PrismaClient to PostgreSQL using the Node.js `pg` driver
-const adapter = new PrismaPg({ connectionString: process.env.NEXT_PUBLIC_SUPABASE_URL })
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 
 // Step 4: Either reuse the existing client from globalThis, or create a new one
 // Pass the adapter so PrismaClient knows how to talk to our Supabase database
