@@ -44,3 +44,7 @@ how markdowns are handled:
   ├──────────────────┼───────────────────┼──────────────────────────────────────────────────┤
   │ rehype-highlight │ Plugin            │ Syntax-highlighted code blocks                   │
   └──────────────────┴───────────────────┴──────────────────────────────────────────────────┘
+
+
+
+  NOTE:  we are storing html also in db cause html to markdown using turndown is causing some formatting losses(as you can see in post/slag page). so we will be displaying using html instead of markdown

@@ -116,6 +116,7 @@ export default function BlogEditor({
       setContent(editor.getHTML())
     },
   })
+  console.log("initialcontent",initialContent)
 
   // Autosave — debounces content/title and saves via API every 2s
   const { status } = useAutosave({ postId: id, content, title, tags })

@@ -24,7 +24,7 @@ model Post {
   markdown  String   @db.Text                 // Converted markdown (used for rendering with react-markdown)
   excerpt   String                            // First ~150 chars of plain text, used in post cards and SEO
   tags      String[]                          // Array of tag strings — PostgreSQL supports native arrays
-  username  String   @default("satyam")       // Author username (hardcoded to "satyam" for now)
+  username  String                            // Author username (hardcoded to "satyam" for now)
   published Boolean  @default(false)          // false = draft (only in editor), true = visible on feed
   createdAt DateTime @default(now())          // Automatically set to current time when post is first created
   updatedAt DateTime @updatedAt               // Automatically updated by Prisma on every save/update

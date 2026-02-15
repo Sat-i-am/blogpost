@@ -90,9 +90,9 @@ export function useAutosave({ postId, content, title, tags, delay = 2000 }: UseA
         markdown: htmlToMarkdown(debouncedContent),
         excerpt: stripHtml(debouncedContent).slice(0, 150),
         tags,
+        username: "satyam",  // hardcoded for now, will become dynamic when auth is added
         createdAt: createdAt.current,
         updatedAt: new Date().toISOString(),
-        username: 'satyam',
         published: published.current,  // preserve current published status (don't accidentally unpublish)
       }
 

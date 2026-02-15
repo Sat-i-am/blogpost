@@ -108,6 +108,7 @@ export default async function PostPage({ params }: PageProps) {
   if (!post) {
     notFound()
   }
+  console.log("this is post",post)
 
   return (
     <article className="max-w-3xl mx-auto py-10 px-6">
