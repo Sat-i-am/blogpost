@@ -6,8 +6,9 @@
  * - Rendered markdown content (via react-markdown with GFM + syntax highlighting)
  * - Edit link to /editor/[id]
  *
- * Note: Since we use localStorage (client-only), this is a client component.
- * When migrating to a DB, this can become a server component with generateMetadata for SEO.
+ * WHAT CHANGED (Supabase migration):
+ * Before: storage.getPostBySlug(slug) — direct localStorage call
+ * After:  fetch(`/api/posts/slug/${slug}`) — HTTP request to our API route
  */
 
 "use client"
@@ -18,7 +19,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { Calendar, Clock, ArrowLeft, Pencil } from 'lucide-react'
-import { storage } from '@/lib/storage'
+// REMOVED: import { storage } from '@/lib/storage'
 import { BlogPost } from '@/lib/types'
 
 /**
@@ -48,14 +49,35 @@ export default function PostPage({ params }: { params: Promise<{ slug: string }>
   const [post, setPost] = useState<BlogPost | null>(null)
   const [notFound, setNotFound] = useState(false)
 
-  // Load the post from localStorage on mount
+  /**
+   * Load the post from the API on mount.
+   *
+   * BEFORE: const found = storage.getPostBySlug(slug)
+   * AFTER:  fetch(`/api/posts/slug/${slug}`) → check response → parse JSON
+   *
+   * Hint:
+   *   async function loadPost() {
+   *     const res = await fetch(`/api/posts/slug/${slug}`)
+   *     if (!res.ok) { setNotFound(true); return }     ← API returns 404 if not found
+   *     const data = await res.json()
+   *     setPost(data)
+   *   }
+   *   loadPost()
+   */
   useEffect(() => {
-    const found = storage.getPostBySlug(slug)
-    if (found) {
-      setPost(found)
-    } else {
-      setNotFound(true)
+    // YOUR CODE HERE — fetch from /api/posts/slug/${slug}
+    // If response is not ok (404), setNotFound(true)
+    // Otherwise, parse JSON and setPost
+    async function loadPost(){
+      const response = await fetch(`/api/posts/slug/${slug}`);
+      if (!response.ok) {
+        setNotFound(true);
+        return;
+      }
+      const data = await response.json();
+      setPost(data);
     }
+    loadPost();
   }, [slug])
 
   if (notFound) {

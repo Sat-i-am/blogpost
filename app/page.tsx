@@ -2,7 +2,13 @@
  * Home / Blog Feed page — /
  *
  * Displays all published posts with search and tag filtering.
- * Uses localStorage via the storage layer, so this must be a client component.
+ *
+ * WHAT CHANGED (Supabase migration):
+ * Before: storage.getPublishedPosts() — direct localStorage call (synchronous)
+ * After:  fetch('/api/posts') — HTTP request to our API route (async)
+ *
+ * The storage import is REMOVED — client components no longer talk to storage directly.
+ * Instead they go through the API routes we just created.
  */
 
 "use client"
@@ -10,7 +16,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { PenSquare } from 'lucide-react'
-import { storage } from '@/lib/storage'
+// REMOVED: import { storage } from '@/lib/storage'   ← no longer needed
 import { BlogPost } from '@/lib/types'
 import PostCard from '@/components/PostCard'
 import SearchBar from '@/components/SearchBar'
@@ -21,9 +27,30 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
 
-  // Load published posts from localStorage on mount
+  /**
+   * Load published posts from the API on mount.
+   *
+   * BEFORE: setPosts(storage.getPublishedPosts())           ← synchronous, one line
+   * AFTER:  fetch → parse JSON → setPosts                    ← async, needs await
+   *
+   * Hint: useEffect can't be async directly, so define an async function inside it
+   *   useEffect(() => {
+   *     async function loadPosts() {
+   *       const res = await fetch('/api/posts')
+   *       const data = await res.json()
+   *       setPosts(data)
+   *     }
+   *     loadPosts()
+   *   }, [])
+   */
   useEffect(() => {
-    setPosts(storage.getPublishedPosts())
+    // YOUR CODE HERE — fetch from /api/posts and setPosts with the result
+    async function loadPosts(){
+      const res = await fetch('/api/posts');
+      const data = await res.json();
+      setPosts(data);
+    }
+    loadPosts()
   }, [])
 
   // Collect all unique tags from published posts (for the tag filter)

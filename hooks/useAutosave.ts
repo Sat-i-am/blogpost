@@ -1,20 +1,22 @@
 /**
  * Autosave hook for the blog editor.
  *
- * Debounces editor content, then saves to localStorage via the storage layer.
+ * Debounces editor content, then saves to the database via our API route.
  * Shows a status indicator: 'idle' -> 'saving' -> 'saved' -> back to 'idle'.
  *
- * This hook assembles a full BlogPost object on each save:
- * - Generates a slug from the title
- * - Converts HTML content to markdown via turndown
- * - Extracts a plain-text excerpt (first 150 chars) for previews
+ * WHAT CHANGED (Supabase migration):
+ * Before: storage.savePost(post) — direct localStorage call (synchronous)
+ * After:  fetch('/api/posts', { method: 'POST', body: JSON.stringify(post) }) — async HTTP
+ *
+ * Also changed:
+ * - storage.getAllPosts() for slug checking → we skip this for autosave (slug generated from title is good enough)
+ * - storage.getPostById() for createdAt and published → we fetch once on mount via API
  */
 
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { useDebounce } from './useDebounce'
-import { storage } from '@/lib/storage'
 import { htmlToMarkdown } from '@/lib/markdown'
 import { uniqueSlug } from '@/lib/slugify'
 import { BlogPost } from '@/lib/types'
@@ -45,17 +47,25 @@ export function useAutosave({ postId, content, title, tags, delay = 2000 }: UseA
   const debouncedTitle = useDebounce(title, delay)
 
   // Track whether this is the initial render (skip saving on mount)
-  const isFirstRender = useRef(true) // useRef holds a value that persists across re-renders without triggering one. It starts as true.
+  const isFirstRender = useRef(true)
 
   // Track the createdAt date so it doesn't change on every save
   const createdAt = useRef<string>(new Date().toISOString())
 
-  // On mount, load existing post's createdAt if editing
+  // Track the published status so autosave doesn't accidentally unpublish
+  const published = useRef<boolean>(false)
+
+  // On mount, load existing post's createdAt and published status from the API
   useEffect(() => {
-    const existing = storage.getPostById(postId)
-    if (existing) {
-      createdAt.current = existing.createdAt
+    async function loadExisting() {
+      const res = await fetch(`/api/posts/${postId}`)
+      if (res.ok) {
+        const existing = await res.json()
+        createdAt.current = existing.createdAt
+        published.current = existing.published
+      }
     }
+    loadExisting()
   }, [postId])
 
   // Save whenever debounced values change (but not on first render)
@@ -68,29 +78,34 @@ export function useAutosave({ postId, content, title, tags, delay = 2000 }: UseA
     // Don't save if there's no meaningful content
     if (!debouncedTitle && !debouncedContent) return
 
-    setStatus('saving')
+    async function save() {
+      setStatus('saving')
 
-    // Build the post object
-    const allSlugs = storage
-      .getAllPosts()
-      .filter((p) => p.id !== postId)
-      .map((p) => p.slug)
+      // Build the post object
+      const post: BlogPost = {
+        id: postId,
+        title: debouncedTitle,
+        slug: uniqueSlug(debouncedTitle || 'untitled', []),  // empty array — DB handles uniqueness via @unique constraint
+        content: debouncedContent,
+        markdown: htmlToMarkdown(debouncedContent),
+        excerpt: stripHtml(debouncedContent).slice(0, 150),
+        tags,
+        createdAt: createdAt.current,
+        updatedAt: new Date().toISOString(),
+        published: published.current,  // preserve current published status (don't accidentally unpublish)
+      }
 
-    const post: BlogPost = {
-      id: postId,
-      title: debouncedTitle,
-      slug: uniqueSlug(debouncedTitle || 'untitled', allSlugs),
-      content: debouncedContent,
-      markdown: htmlToMarkdown(debouncedContent),
-      excerpt: stripHtml(debouncedContent).slice(0, 150),
-      tags,
-      createdAt: createdAt.current,
-      updatedAt: new Date().toISOString(),
-      published: storage.getPostById(postId)?.published ?? false,
+      // POST to our API route — the API calls storage.savePost() which does a Prisma upsert
+      await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(post),
+      })
+
+      setStatus('saved')
     }
 
-    storage.savePost(post)
-    setStatus('saved')
+    save()
 
     // Reset status back to idle after 2 seconds
     const timer = setTimeout(() => setStatus('idle'), 2000)

@@ -1,16 +1,20 @@
 /**
  * Edit Post page — /editor/[id]
  *
- * Loads an existing post by ID from localStorage and renders the BlogEditor
+ * Loads an existing post by ID and renders the BlogEditor
  * pre-filled with the post's title, content, and tags.
  * On publish, redirects to the updated post's URL.
+ *
+ * WHAT CHANGED (Supabase migration):
+ * Before: storage.getPostById(id) — direct localStorage call
+ * After:  fetch(`/api/posts/${id}`) — HTTP request to our API route
  */
 
 "use client"
 
 import { use, useState, useEffect } from 'react'
 import BlogEditor from '@/components/Editor/BlogEditor'
-import { storage } from '@/lib/storage'
+// REMOVED: import { storage } from '@/lib/storage'
 import { useRouter } from 'next/navigation'
 import { BlogPost } from '@/lib/types'
 import { ArrowLeft } from 'lucide-react'
@@ -22,14 +26,36 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   const [post, setPost] = useState<BlogPost | null>(null)
   const [notFound, setNotFound] = useState(false)
 
-  // Load the post from localStorage on mount
+  /**
+   * Load the post from the API on mount.
+   *
+   * BEFORE: const existing = storage.getPostById(id)
+   * AFTER:  fetch(`/api/posts/${id}`) → check response → parse JSON
+   *
+   * Hint: Same pattern as the post view page
+   *   async function loadPost() {
+   *     const res = await fetch(`/api/posts/${id}`)
+   *     if (!res.ok) { setNotFound(true); return }
+   *     const data = await res.json()
+   *     setPost(data)
+   *   }
+   *   loadPost()
+   */
   useEffect(() => {
-    const existing = storage.getPostById(id)
-    if (existing) {
-      setPost(existing)
-    } else {
-      setNotFound(true)
+    // YOUR CODE HERE — fetch from /api/posts/${id}
+    // If response is not ok (404), setNotFound(true)
+    // Otherwise, parse JSON and setPost
+    async function loadPost(){
+      const response = await fetch(`/api/posts/${id}`);
+      if (!response.ok) {
+        setNotFound(true);
+        return;
+      }
+      const data = await response.json();
+      setPost(data);
     }
+    loadPost();
+   
   }, [id])
 
   if (notFound) {
@@ -49,7 +75,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     )
   }
 
-  // Show nothing while loading from localStorage
+  // Show nothing while loading from API
   if (!post) return null
 
   return (

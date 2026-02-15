@@ -3,14 +3,16 @@
  *
  * Combines TipTap rich-text editor with:
  * - Title input (large, clean, no border)
- * - Tags input (comma-separated)
+ * - Tags input (#hashtag + space to create chips)
  * - Formatting toolbar (via Menubar)
- * - Autosave to localStorage (2s debounce)
+ * - Autosave to database (2s debounce via API)
  * - Save Draft / Publish buttons
  *
- * Used in two modes:
- * - New post:  <BlogEditor /> — generates a fresh UUID, empty content
- * - Edit post: <BlogEditor postId="..." initialTitle="..." initialContent="..." initialTags={[...]} />
+ * WHAT CHANGED (Supabase migration):
+ * Before: storage.savePost(post) and storage.getAllPosts() — direct localStorage
+ * After:  fetch('/api/posts', { method: 'POST', body: ... }) — async HTTP
+ *
+ * The storage import is REMOVED. All saves go through the API now.
  */
 
 "use client"
@@ -23,7 +25,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { Save, Send, Loader2, Check, Hash, X } from 'lucide-react'
 import MenuBar from './Menubar'
 import { useAutosave } from '@/hooks/useAutosave'
-import { storage } from '@/lib/storage'
+// REMOVED: import { storage } from '@/lib/storage'
 import { htmlToMarkdown } from '@/lib/markdown'
 import { uniqueSlug } from '@/lib/slugify'
 import { BlogPost } from '@/lib/types'
@@ -65,14 +67,13 @@ export default function BlogEditor({
    * When user types "#word " (hash + word + space), extract the tag and add it as a chip.
    */
   function handleTagInputChange(value: string) {
-    // Check if the input ends with a space and contains a # tag
     const match = value.match(/#(\w+)\s$/)
     if (match) {
       const newTag = match[1].toLowerCase()
       if (!tags.includes(newTag)) {
         setTags((prev) => [...prev, newTag])
       }
-      setTagInput('')  // clear input after adding tag
+      setTagInput('')
     } else {
       setTagInput(value)
     }
@@ -116,45 +117,96 @@ export default function BlogEditor({
     },
   })
 
-  // Autosave — debounces content/title and saves to localStorage every 2s
+  // Autosave — debounces content/title and saves via API every 2s
   const { status } = useAutosave({ postId: id, content, title, tags })
 
   /**
    * Build a complete BlogPost object from current editor state.
    * Used by both Save Draft and Publish buttons.
+   *
+   * WHAT CHANGED:
+   * Before: storage.getAllPosts() to get existing slugs, storage.getPostById() for createdAt
+   * After:  We skip slug duplicate checking (DB handles it with @unique constraint)
+   *         We don't need to fetch createdAt — Prisma handles it automatically
+   *
+   * Hint: The post object is simpler now:
+   *   {
+   *     id,
+   *     title,
+   *     slug: uniqueSlug(title || 'untitled', []),   ← empty array, DB handles uniqueness
+   *     content,
+   *     markdown: htmlToMarkdown(content),
+   *     excerpt: stripHtml(content).slice(0, 150),
+   *     tags,
+   *     createdAt: new Date().toISOString(),          ← Prisma ignores this on update (uses @updatedAt)
+   *     updatedAt: new Date().toISOString(),
+   *     published,
+   *   }
    */
   function buildPost(published: boolean): BlogPost {
-    const allSlugs = storage
-      .getAllPosts()
-      .filter((p) => p.id !== id)
-      .map((p) => p.slug)
-
-    const existing = storage.getPostById(id)
-
     return {
       id,
       title,
-      slug: uniqueSlug(title || 'untitled', allSlugs),
+      slug: uniqueSlug(title || 'untitled', []),  // empty array — DB handles uniqueness via @unique constraint
       content,
       markdown: htmlToMarkdown(content),
       excerpt: stripHtml(content).slice(0, 150),
       tags,
-      createdAt: existing?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),   // Prisma ignores this on update (uses @default(now()) for create)
+      updatedAt: new Date().toISOString(),   // Prisma auto-updates this via @updatedAt
       published,
     }
   }
 
-  /** Save as draft (published = false) */
-  function handleSaveDraft() {
+  /**
+   * Save as draft (published = false).
+   *
+   * BEFORE: storage.savePost(post)  — synchronous
+   * AFTER:  fetch('/api/posts', { method: 'POST', ... })  — async
+   *
+   * Hint: Make this function async:
+   *   async function handleSaveDraft() {
+   *     const post = buildPost(false)
+   *     await fetch('/api/posts', {
+   *       method: 'POST',
+   *       headers: { 'Content-Type': 'application/json' },
+   *       body: JSON.stringify(post),
+   *     })
+   *   }
+   */
+  async function handleSaveDraft() {
     const post = buildPost(false)
-    storage.savePost(post)
+    await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(post),
+    })
   }
 
-  /** Publish the post (published = true) and notify parent */
-  function handlePublish() {
+  /**
+   * Publish the post (published = true) and notify parent.
+   *
+   * BEFORE: storage.savePost(post)  — synchronous
+   * AFTER:  fetch('/api/posts', { method: 'POST', ... })  — async
+   *
+   * Hint: Same as draft but with published = true, and call onPublish after:
+   *   async function handlePublish() {
+   *     const post = buildPost(true)
+   *     await fetch('/api/posts', {
+   *       method: 'POST',
+   *       headers: { 'Content-Type': 'application/json' },
+   *       body: JSON.stringify(post),
+   *     })
+   *     onPublish?.(post)
+   *   }
+   */
+  async function handlePublish() {
     const post = buildPost(true)
-    storage.savePost(post)
+    await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(post),
+    })
     onPublish?.(post)
   }
 
