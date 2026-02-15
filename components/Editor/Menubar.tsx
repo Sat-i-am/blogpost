@@ -13,7 +13,7 @@ import { Editor } from "@tiptap/react";
 import { Heading1, Heading2, Heading3, Bold, Italic, Strikethrough, List, AlignCenter, AlignLeft, AlignRight, Highlighter, ListOrdered, AlignJustify } from "lucide-react"
 import { Toggle } from "../ui/toggle";
 
-const MenuBar = ({ editor }: { editor: Editor }) => {
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
     if (!editor) {
         return null
     }

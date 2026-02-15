@@ -111,7 +111,7 @@ export default function BlogEditor({
       Highlight.configure({ multicolor: true }),
     ],
     content: initialContent,
-    immediatelyRender: true,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       setContent(editor.getHTML())
     },
