@@ -1,26 +1,74 @@
 /**
  * Single Post view — /post/[slug]
  *
+ * THIS IS NOW A SERVER COMPONENT (no "use client").
+ *
+ * Why the change?
+ * Before (localStorage): Data was only in the browser, so we needed "use client",
+ *   useState, useEffect, and fetch() to load the post after the page rendered.
+ *   Result: Google/Twitter saw an empty page — bad for SEO.
+ *
+ * After (Supabase): Data is in the database, which the server can access directly.
+ *   The server renders the full HTML before sending it to the browser.
+ *   Result: Google sees the complete post — proper SEO at last.
+ *
+ * What's different:
+ * - No "use client" → this runs on the server
+ * - No useState/useEffect → the component is an async function that awaits data
+ * - No fetch() → we call storage.getPostBySlug() directly (server has DB access)
+ * - generateMetadata() → sets <title>, <meta description>, Open Graph tags for SEO
+ * - notFound() → Next.js built-in 404 page instead of custom not-found UI
+ *
  * Displays a published blog post with:
  * - Title, date, reading time, tags
  * - Rendered markdown content (via react-markdown with GFM + syntax highlighting)
  * - Edit link to /editor/[id]
- *
- * WHAT CHANGED (Supabase migration):
- * Before: storage.getPostBySlug(slug) — direct localStorage call
- * After:  fetch(`/api/posts/slug/${slug}`) — HTTP request to our API route
  */
 
-"use client"
-
-import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { Calendar, Clock, ArrowLeft, Pencil } from 'lucide-react'
-// REMOVED: import { storage } from '@/lib/storage'
-import { BlogPost } from '@/lib/types'
+import { storage } from '@/lib/storage'
+import type { Metadata } from 'next'
+
+// --- Type for the route params (Next.js 16 uses Promise for params) ---
+type PageProps = {
+  params: Promise<{ slug: string }>
+}
+
+/**
+ * generateMetadata — called by Next.js BEFORE rendering the page.
+ *
+ * This is the SEO magic. It sets:
+ * - <title>Post Title | Blog</title>   (uses the template from layout.tsx)
+ * - <meta name="description" content="First 150 chars...">
+ * - Open Graph tags (og:title, og:description) — used by Twitter, Facebook, WhatsApp, Slack
+ *   when someone shares a link to this post.
+ *
+ * Without this, social media previews would show generic "Blog" text.
+ * With this, they show the actual post title and excerpt.
+ */
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params
+  const post = await storage.getPostBySlug(slug)
+
+  if (!post) {
+    return { title: 'Post not found' }
+  }
+
+  return {
+    title: post.title,                    // becomes "Post Title | Blog" via layout template
+    description: post.excerpt,            // <meta name="description">
+    openGraph: {
+      title: post.title,                  // og:title — shown in social media cards
+      description: post.excerpt,          // og:description — shown below the title
+      type: 'article',                    // tells platforms this is a blog article
+    },
+  }
+}
 
 /**
  * Calculate reading time based on word count.
@@ -33,73 +81,33 @@ function readingTime(text: string): string {
 }
 
 /**
- * Format an ISO date string into a human-readable format.
- * Example: "2026-02-14T10:30:00Z" -> "Feb 14, 2026"
+ * Format a date into a human-readable format.
+ * Handles both Date objects (from Prisma) and ISO strings.
+ * Example: "Feb 14, 2026"
  */
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+function formatDate(date: string | Date): string {
+  return new Date(date).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
 }
 
-export default function PostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
-  const [post, setPost] = useState<BlogPost | null>(null)
-  const [notFound, setNotFound] = useState(false)
+/**
+ * Server Component — runs on the server, returns fully rendered HTML.
+ *
+ * Notice: this is an async function (not possible with client components).
+ * We await the data directly — no useState, no useEffect, no loading states.
+ * The page arrives fully rendered in the browser.
+ */
+export default async function PostPage({ params }: PageProps) {
+  const { slug } = await params
+  const post = await storage.getPostBySlug(slug)
 
-  /**
-   * Load the post from the API on mount.
-   *
-   * BEFORE: const found = storage.getPostBySlug(slug)
-   * AFTER:  fetch(`/api/posts/slug/${slug}`) → check response → parse JSON
-   *
-   * Hint:
-   *   async function loadPost() {
-   *     const res = await fetch(`/api/posts/slug/${slug}`)
-   *     if (!res.ok) { setNotFound(true); return }     ← API returns 404 if not found
-   *     const data = await res.json()
-   *     setPost(data)
-   *   }
-   *   loadPost()
-   */
-  useEffect(() => {
-    // YOUR CODE HERE — fetch from /api/posts/slug/${slug}
-    // If response is not ok (404), setNotFound(true)
-    // Otherwise, parse JSON and setPost
-    async function loadPost(){
-      const response = await fetch(`/api/posts/slug/${slug}`);
-      if (!response.ok) {
-        setNotFound(true);
-        return;
-      }
-      const data = await response.json();
-      setPost(data);
-    }
-    loadPost();
-  }, [slug])
-
-  if (notFound) {
-    return (
-      <div className="max-w-3xl mx-auto py-24 px-6 text-center">
-        <div className="text-6xl mb-4 bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent font-bold">404</div>
-        <h1 className="text-2xl font-bold mb-2">Post not found</h1>
-        <p className="text-muted-foreground mb-6">
-          The post you are looking for doesn't exist.
-        </p>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
-        >
-          <ArrowLeft className="size-4" />
-          Back to home
-        </Link>
-      </div>
-    )
+  // If no post found, show Next.js built-in 404 page
+  if (!post) {
+    notFound()
   }
-
-  if (!post) return null
 
   return (
     <article className="max-w-3xl mx-auto py-10 px-6">
