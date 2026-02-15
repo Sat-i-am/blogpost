@@ -1,14 +1,30 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma schema — defines the database tables and generates the TypeScript client.
+// Docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// Generator: tells Prisma to create a TypeScript client we can import in our code.
+// The client is generated into lib/generated/prisma (set by Prisma init).
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
 }
 
+// Datasource: connects to our Supabase PostgreSQL database.
+// The URL is read from the DATABASE_URL variable in .env (keeps credentials out of code).
 datasource db {
   provider = "postgresql"
+}
+
+// Post table — stores all blog posts (drafts and published).
+// Each field becomes a column in the database.
+model Post {
+  id        String   @id @default(uuid())    // Primary key — auto-generated UUID for each post
+  title     String                            // Post title entered by the user
+  slug      String   @unique                  // URL-safe version of title, must be unique across all posts
+  content   String   @db.Text                 // Raw HTML from TipTap editor — Text type allows unlimited length
+  markdown  String   @db.Text                 // Converted markdown (used for rendering with react-markdown)
+  excerpt   String                            // First ~150 chars of plain text, used in post cards and SEO
+  tags      String[]                          // Array of tag strings — PostgreSQL supports native arrays
+  published Boolean  @default(false)          // false = draft (only in editor), true = visible on feed
+  createdAt DateTime @default(now())          // Automatically set to current time when post is first created
+  updatedAt DateTime @updatedAt               // Automatically updated by Prisma on every save/update
 }
