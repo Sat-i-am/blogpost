@@ -52,8 +52,11 @@ export async function GET(request: NextRequest) {
     try {
         const search = request.nextUrl.searchParams.get('search');
         const tag = request.nextUrl.searchParams.get('tag');
+        const username = request.nextUrl.searchParams.get('username');
         let posts = [];
-        if (search) {
+        if (username) {
+            posts = await storage.getPostsByUsername(username);
+        } else if (search) {
             posts = await storage.searchPosts(search);
         } else {
             posts = await storage.getPublishedPosts();

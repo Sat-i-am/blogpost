@@ -95,6 +95,7 @@ export const storage = {
     markdown: string
     excerpt: string
     tags: string[]
+    username: string
     published: boolean
   }) {
     // YOUR CODE HERE
@@ -108,6 +109,7 @@ export const storage = {
         markdown:post.markdown,
         excerpt:post.excerpt,
         tags:post.tags,
+        username:post.username,
         published:post.published,
       },
       update:{
@@ -117,8 +119,20 @@ export const storage = {
         markdown:post.markdown,
         excerpt:post.excerpt,
         tags:post.tags,
+        username:post.username,
         published:post.published,
       },
+    })
+  },
+
+  /**
+   * Get all posts (drafts + published) by a specific username.
+   * Used by the "My Posts" page.
+   */
+  async getPostsByUsername(username: string) {
+    return prisma.post.findMany({
+      where: { username },
+      orderBy: { updatedAt: 'desc' },
     })
   },
 

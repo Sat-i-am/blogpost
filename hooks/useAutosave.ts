@@ -92,6 +92,7 @@ export function useAutosave({ postId, content, title, tags, delay = 2000 }: UseA
         tags,
         createdAt: createdAt.current,
         updatedAt: new Date().toISOString(),
+        username: 'satyam',
         published: published.current,  // preserve current published status (don't accidentally unpublish)
       }
 
