@@ -28,4 +28,5 @@ model Post {
   published Boolean  @default(false)          // false = draft (only in editor), true = visible on feed
   createdAt DateTime @default(now())          // Automatically set to current time when post is first created
   updatedAt DateTime @updatedAt               // Automatically updated by Prisma on every save/update
+  yjsState Bytes?                             // Yjs document state(binary). Null for posts that haven't been collaboratively edited yet.
 }
