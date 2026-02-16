@@ -14,6 +14,7 @@
     "@prisma/client": "^7.4.0",
     "@supabase/supabase-js": "^2.95.3",
     "@tiptap/extension-collaboration": "^3.19.0",
+    "@tiptap/extension-collaboration-caret": "^3.19.0",
     "@tiptap/extension-highlight": "^3.19.0",
     "@tiptap/extension-list": "^3.19.0",
     "@tiptap/extension-text-align": "^3.19.0",
