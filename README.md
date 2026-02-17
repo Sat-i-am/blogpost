@@ -49,6 +49,9 @@ how markdowns are handled:
 
   NOTE:  we are storing html also in db cause html to markdown using turndown is causing some formatting losses(as you can see in post/slag page). so we will be displaying using html instead of markdown
 
+  for slag page we are showing using markdown, 
+  for editor we are now using 
+
 
 
 
@@ -111,23 +114,27 @@ Tab A reconnects
 
 
 
-### Two Columns, Two Purposes
-
-You still need **both** columns — they serve different roles:
+### Three Columns, Three Purposes
 
 | Column | Source of truth for | Used by |
 |--------|-------------------|---------|
 | `yjsState` (binary) | **Editing** | `/editor/[id]` — loaded via Hocuspocus `fetch()` into Yjs, rendered by TipTap |
-| `content` (HTML) | **Reading/Viewing** | `/post/[slug]`, home feed, search, excerpts — rendered with `react-markdown` |
+| `markdown` (text) | **Reading/Viewing** | `/post/[slug]` — rendered with `react-markdown` + remark-gfm + rehype-highlight |
+| `content` (HTML) | **Editor fallback** | Seeds Yjs doc on first collab session (when `yjsState` is empty). Also used by `readingTime()` |
 
 ### Data Flow
 
 ```
 Editing:
   Open editor → Hocuspocus fetch() loads yjsState from DB → Yjs doc → TipTap renders
+  (If no yjsState yet → falls back to content HTML to seed the Yjs doc)
   User types  → Yjs captures it → Hocuspocus store() saves yjsState to DB
 
 Publishing:
-  User clicks "Publish" → editor.getHTML() → POST /api/posts → updates content (HTML) column
-  View pages read from content column as before
+  User clicks "Publish" → editor.getHTML() → POST /api/posts
+    → updates content (HTML) column
+    → updates markdown column (via turndown: HTML → Markdown)
+
+Viewing:
+  /post/[slug] → reads markdown column → ReactMarkdown renders it
 ```

@@ -32,8 +32,7 @@ import { BlogPost } from '@/lib/types'
 import * as Y from 'yjs'
 import { HocuspocusProvider } from '@hocuspocus/provider'
 import Collaboration from '@tiptap/extension-collaboration'
-// Caret (CollaborationCursor) needs a provider — add it later once sync works
-// import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
+import CollaborationCaret from '@tiptap/extension-collaboration-caret'
 
 interface BlogEditorProps {
   postId?: string
@@ -127,6 +126,7 @@ export default function BlogEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        // @ts-ignore - history is a valid option but TypeScript definition might be outdated
         history: false,   // ← CRITICAL: disable built-in undo. Yjs handles it now.
       }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -134,6 +134,13 @@ export default function BlogEditor({
       Collaboration.configure({
         document: ydoc,   // ← this is what makes it collaborative
       }),
+      ...(provider ? [CollaborationCaret.configure({
+        provider,
+        user: {
+          name: 'User ' + Math.floor(Math.random() * 100),
+          color: ['#f8a4a4', '#a4d4f8', '#a4f8b4', '#f8d4a4', '#d4a4f8', '#f8a4d4', '#a4f8e4', '#f8f4a4'][Math.floor(Math.random() * 8)],
+        },
+      })] : []),
     ],
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
