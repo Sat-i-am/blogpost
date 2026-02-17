@@ -29,6 +29,11 @@ import { useAutosave } from '@/hooks/useAutosave'
 import { htmlToMarkdown } from '@/lib/markdown'
 import { uniqueSlug } from '@/lib/slugify'
 import { BlogPost } from '@/lib/types'
+import * as Y from 'yjs'
+import { HocuspocusProvider } from '@hocuspocus/provider'
+import Collaboration from '@tiptap/extension-collaboration'
+// Caret (CollaborationCursor) needs a provider — add it later once sync works
+// import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
 
 interface BlogEditorProps {
   postId?: string
@@ -102,20 +107,67 @@ export default function BlogEditor({
   function removeTag(tag: string) {
     setTags((prev) => prev.filter((t) => t !== tag))
   }
+  // Create a Yjs document (the shared data structure)
+  const ydoc = useMemo(() => new Y.Doc(), [])
+
+ 
+  const [provider, setProvider] = useState<HocuspocusProvider | null>(null)
+
+  useEffect(() => {
+    const p = new HocuspocusProvider({
+      url: 'ws://localhost:1234',
+      name: id,
+      document: ydoc,
+    })
+    setProvider(p)
+    return () => p.destroy()  // cleanup on unmount
+  }, [])
 
   // TipTap editor setup
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        history: false,   // ← CRITICAL: disable built-in undo. Yjs handles it now.
+      }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Highlight.configure({ multicolor: true }),
+      Collaboration.configure({
+        document: ydoc,   // ← this is what makes it collaborative
+      }),
     ],
-    content: initialContent,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       setContent(editor.getHTML())
     },
-  })
+  },[provider])
+
+  // Load existing content into the Yjs document once editor + provider are ready.
+  // This only runs once: checks if the Yjs doc is empty (no prior collab session),
+  // and if so, seeds it with the existing HTML from the database.
+  // After this, Yjs takes over as the source of truth and syncs to all tabs.
+  useEffect(() => {
+    if (!editor || !provider) return
+
+    const handleSync = () => {
+      // Check if Yjs doc is empty (first time this post is opened collaboratively)
+      const yXmlFragment = ydoc.getXmlFragment('default')
+      if (yXmlFragment.length === 0 && initialContent) {
+        editor.commands.setContent(initialContent)
+      }
+    }
+
+    // 'synced' fires after the provider has synced with the server
+    // If already synced, run immediately; otherwise wait for the event
+    if (provider.isSynced) {
+      handleSync()
+    } else {
+      provider.on('synced', handleSync)
+    }
+
+    return () => {
+      provider.off('synced', handleSync)
+    }
+  }, [editor, provider])
   console.log("initialcontent",initialContent)
 
   // Autosave — debounces content/title and saves via API every 2s
