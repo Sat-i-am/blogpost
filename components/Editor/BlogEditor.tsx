@@ -120,7 +120,7 @@ export default function BlogEditor({
     })
     setProvider(p)
     return () => p.destroy()  // cleanup on unmount
-  }, [])
+  }, [id, ydoc])
 
   // TipTap editor setup
   const editor = useEditor({
