@@ -114,7 +114,7 @@ export default function BlogEditor({
 
   useEffect(() => {
     const p = new HocuspocusProvider({
-      url: 'ws://localhost:1234',
+      url: process.env.NEXT_PUBLIC_COLLAB_WS_URL || "ws://localhost:1234",
       name: id,
       document: ydoc,
     })
