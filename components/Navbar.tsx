@@ -1,22 +1,34 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PenSquare, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import type { User } from '@supabase/supabase-js'
 
-interface NavbarProps {
-  isLoggedIn: boolean
-}
-
-export default function Navbar({ isLoggedIn }: NavbarProps) {
+export default function Navbar() {
   const router = useRouter()
   const supabase = createClient()
+  const [user, setUser] = useState<User | null>(null)
+
+  useEffect(() => {
+    // Get the current session on mount
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+
+    // onAuthStateChange fires whenever the session changes:
+    // login, logout, token refresh, tab focus with expired token, etc.
+    // This is what keeps the navbar in sync without any server round-trip.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
-    router.refresh()
   }
 
   return (
@@ -28,7 +40,7 @@ export default function Navbar({ isLoggedIn }: NavbarProps) {
         </Link>
 
         <div className="flex items-center gap-4">
-          {isLoggedIn ? (
+          {user ? (
             <>
               <Link
                 href="/my-posts"

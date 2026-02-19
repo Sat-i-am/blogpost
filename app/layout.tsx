@@ -9,7 +9,6 @@
 
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import { createClient } from "@/lib/supabase/server"
 import Navbar from "@/components/Navbar"
 import "./globals.css"
 
@@ -31,20 +30,17 @@ export const metadata: Metadata = {
   description: "A modern blog platform built with Next.js and TipTap",
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
-        <Navbar isLoggedIn={!!user} />
+        <Navbar />
 
         <main className="min-h-[calc(100vh-65px)]">
           {children}
