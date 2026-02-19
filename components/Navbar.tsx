@@ -9,16 +9,16 @@ import type { User } from '@supabase/supabase-js'
 
 export default function Navbar() {
   const router = useRouter()
-  const supabase = createClient()
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
-    // Get the current session on mount
+    // createClient() is called here inside useEffect so it only ever runs in the
+    // browser — never during SSR or static prerendering. This prevents build
+    // failures when env vars are checked at render time on the server.
+    const supabase = createClient()
+
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
 
-    // onAuthStateChange fires whenever the session changes:
-    // login, logout, token refresh, tab focus with expired token, etc.
-    // This is what keeps the navbar in sync without any server round-trip.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
@@ -27,6 +27,7 @@ export default function Navbar() {
   }, [])
 
   const handleLogout = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
   }
