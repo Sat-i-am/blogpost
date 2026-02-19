@@ -30,8 +30,9 @@ import { notFound } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
-import { Calendar, Clock, ArrowLeft, Pencil } from 'lucide-react'
+import { Calendar, Clock, ArrowLeft, Pencil, Eye } from 'lucide-react'
 import { storage } from '@/lib/storage'
+import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 
 // --- Type for the route params (Next.js 16 uses Promise for params) ---
@@ -102,13 +103,20 @@ function formatDate(date: string | Date): string {
  */
 export default async function PostPage({ params }: PageProps) {
   const { slug } = await params
-  const post = await storage.getPostBySlug(slug)
+
+  // Fetch the post and the current user in parallel — both are independent async calls
+  const [post, { data: { user } }] = await Promise.all([
+    storage.getPostBySlug(slug),
+    createClient().then(supabase => supabase.auth.getUser()),
+  ])
 
   // If no post found, show Next.js built-in 404 page
   if (!post) {
     notFound()
   }
-  console.log("this is post",post)
+
+  // True only if the logged-in user's email matches the post author
+  const isAuthor = !!user?.email && user.email === post.username
 
   return (
     <article className="max-w-3xl mx-auto py-10 px-6">
@@ -142,13 +150,32 @@ export default async function PostPage({ params }: PageProps) {
             <Clock className="size-4" />
             <span>{readingTime(post.content)}</span>
           </div>
-          <Link
-            href={`/editor/${post.id}`}
-            className="inline-flex items-center gap-1.5 text-primary hover:underline ml-auto"
-          >
-            <Pencil className="size-3.5" />
-            Edit
-          </Link>
+          <div className="flex items-center gap-3 ml-auto">
+            {/* Edit — only active for the author */}
+            {isAuthor ? (
+              <Link
+                href={`/editor/${post.id}`}
+                className="inline-flex items-center gap-1.5 text-primary hover:underline"
+              >
+                <Pencil className="size-3.5" />
+                Edit
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-muted-foreground/40 cursor-not-allowed select-none">
+                <Pencil className="size-3.5" />
+                Edit
+              </span>
+            )}
+
+            {/* View — always active for everyone */}
+            <Link
+              href={`/editor/${post.id}?mode=view`}
+              className="inline-flex items-center gap-1.5 text-primary hover:underline"
+            >
+              <Eye className="size-3.5" />
+              View
+            </Link>
+          </div>
         </div>
       </header>
 

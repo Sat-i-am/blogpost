@@ -14,49 +14,51 @@
 
 import { use, useState, useEffect } from 'react'
 import BlogEditor from '@/components/Editor/BlogEditor'
-// REMOVED: import { storage } from '@/lib/storage'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { BlogPost } from '@/lib/types'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // ?mode=view forces read-only regardless of authorship
+  const viewMode = searchParams.get('mode') === 'view'
+
   const [post, setPost] = useState<BlogPost | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [isAuthor, setIsAuthor] = useState(false)
 
-  /**
-   * Load the post from the API on mount.
-   *
-   * BEFORE: const existing = storage.getPostById(id)
-   * AFTER:  fetch(`/api/posts/${id}`) → check response → parse JSON
-   *
-   * Hint: Same pattern as the post view page
-   *   async function loadPost() {
-   *     const res = await fetch(`/api/posts/${id}`)
-   *     if (!res.ok) { setNotFound(true); return }
-   *     const data = await res.json()
-   *     setPost(data)
-   *   }
-   *   loadPost()
-   */
   useEffect(() => {
-    // YOUR CODE HERE — fetch from /api/posts/${id}
-    // If response is not ok (404), setNotFound(true)
-    // Otherwise, parse JSON and setPost
-    async function loadPost(){
-      const response = await fetch(`/api/posts/${id}`);
-      if (!response.ok) {
-        setNotFound(true);
-        return;
+    async function loadPost() {
+      // If we're in forced view mode, skip the auth check entirely
+      if (viewMode) {
+        const response = await fetch(`/api/posts/${id}`)
+        if (!response.ok) { setNotFound(true); return }
+        setPost(await response.json())
+        return
       }
-      const data = await response.json();
-      setPost(data);
+
+      // Otherwise fetch post and current user in parallel to determine authorship
+      const supabase = createClient()
+      const [response, { data: { user } }] = await Promise.all([
+        fetch(`/api/posts/${id}`),
+        supabase.auth.getUser(),
+      ])
+
+      if (!response.ok) {
+        setNotFound(true)
+        return
+      }
+
+      const data: BlogPost = await response.json()
+      setPost(data)
+      setIsAuthor(!!user?.email && user.email === data.username)
     }
-    loadPost();
-   
-  }, [id])
+    loadPost()
+  }, [id, viewMode])
 
   if (notFound) {
     return (
@@ -86,6 +88,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         initialContent={post.content}
         initialTags={post.tags}
         onPublish={(updated) => router.push(`/post/${updated.slug}`)}
+        readOnly={viewMode || !isAuthor}
       />
     </div>
   )

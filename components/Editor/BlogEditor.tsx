@@ -40,6 +40,7 @@ interface BlogEditorProps {
   initialTitle?: string
   initialTags?: string[]
   onPublish?: (post: BlogPost) => void
+  readOnly?: boolean
 }
 
 /**
@@ -56,6 +57,7 @@ export default function BlogEditor({
   initialTitle = '',
   initialTags = [],
   onPublish,
+  readOnly = false,
 }: BlogEditorProps) {
   // Generate a stable post ID for new posts (useMemo so it doesn't change on re-render)
   const id = useMemo(() => postId || crypto.randomUUID(), [postId])
@@ -142,6 +144,7 @@ export default function BlogEditor({
         },
       })] : []),
     ],
+    editable: !readOnly,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       setContent(editor.getHTML())
@@ -178,7 +181,7 @@ export default function BlogEditor({
   console.log("initialcontent",initialContent)
 
   // Autosave — debounces content/title and saves via API every 2s
-  const { status } = useAutosave({ postId: id, content, title, tags })
+  const { status } = useAutosave({ postId: id, content, title, tags, disabled: readOnly })
 
   /**
    * Build a complete BlogPost object from current editor state.
@@ -277,86 +280,96 @@ export default function BlogEditor({
         {/* Header: title + actions */}
         <div className="p-6 pb-0">
           <div className="flex items-start justify-between gap-4 mb-4">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Post title..."
-              className="flex-1 text-3xl font-bold bg-transparent outline-none placeholder:text-muted-foreground/40 leading-tight"
-            />
-            <div className="flex items-center gap-2 shrink-0 pt-1">
-              {/* Autosave status indicator */}
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1">
-                {status === 'saving' && (
-                  <>
-                    <Loader2 className="size-3 animate-spin" />
-                    Saving...
-                  </>
-                )}
-                {status === 'saved' && (
-                  <>
-                    <Check className="size-3 text-green-500" />
-                    Saved
-                  </>
-                )}
-              </span>
-              <button
-                onClick={handleSaveDraft}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border rounded-lg hover:bg-muted transition-colors"
-              >
-                <Save className="size-3.5" />
-                Draft
-              </button>
-              <button
-                onClick={handlePublish}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground rounded-lg hover:opacity-90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30"
-              >
-                <Send className="size-3.5" />
-                Publish
-              </button>
-            </div>
+            {readOnly ? (
+              <h2 className="flex-1 text-3xl font-bold leading-tight">{title}</h2>
+            ) : (
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Post title..."
+                className="flex-1 text-3xl font-bold bg-transparent outline-none placeholder:text-muted-foreground/40 leading-tight"
+              />
+            )}
+            {!readOnly && (
+              <div className="flex items-center gap-2 shrink-0 pt-1">
+                {/* Autosave status indicator */}
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1">
+                  {status === 'saving' && (
+                    <>
+                      <Loader2 className="size-3 animate-spin" />
+                      Saving...
+                    </>
+                  )}
+                  {status === 'saved' && (
+                    <>
+                      <Check className="size-3 text-green-500" />
+                      Saved
+                    </>
+                  )}
+                </span>
+                <button
+                  onClick={handleSaveDraft}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border rounded-lg hover:bg-muted transition-colors"
+                >
+                  <Save className="size-3.5" />
+                  Draft
+                </button>
+                <button
+                  onClick={handlePublish}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground rounded-lg hover:opacity-90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30"
+                >
+                  <Send className="size-3.5" />
+                  Publish
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Tags input — type #tagname + space to create a chip */}
+          {/* Tags — editable in edit mode, display-only in read-only mode */}
           <div
-            className="flex items-center gap-2 flex-wrap mb-4 border-b pb-3 cursor-text focus-within:border-primary/30 transition-colors"
-            onClick={() => tagInputRef.current?.focus()}
+            className={`flex items-center gap-2 flex-wrap mb-4 border-b pb-3 ${!readOnly ? 'cursor-text focus-within:border-primary/30 transition-colors' : ''}`}
+            onClick={() => !readOnly && tagInputRef.current?.focus()}
           >
             <Hash className="size-3.5 text-muted-foreground/50 shrink-0" />
 
-            {/* Rendered tag chips */}
             {tags.map((tag) => (
               <span
                 key={tag}
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary border border-primary/20"
               >
                 {tag}
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeTag(tag) }}
-                  className="hover:text-destructive transition-colors"
-                >
-                  <X className="size-3" />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeTag(tag) }}
+                    className="hover:text-destructive transition-colors"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
               </span>
             ))}
 
-            {/* Text input for typing new tags */}
-            <input
-              ref={tagInputRef}
-              type="text"
-              value={tagInput}
-              onChange={(e) => handleTagInputChange(e.target.value)}
-              onKeyDown={handleTagKeyDown}
-              placeholder={tags.length === 0 ? 'Type #tag and press space...' : 'Add more...'}
-              className="flex-1 min-w-[120px] text-sm bg-transparent outline-none placeholder:text-muted-foreground/40"
-            />
+            {!readOnly && (
+              <input
+                ref={tagInputRef}
+                type="text"
+                value={tagInput}
+                onChange={(e) => handleTagInputChange(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder={tags.length === 0 ? 'Type #tag and press space...' : 'Add more...'}
+                className="flex-1 min-w-[120px] text-sm bg-transparent outline-none placeholder:text-muted-foreground/40"
+              />
+            )}
           </div>
         </div>
 
-        {/* Formatting toolbar */}
-        <div className="px-6 py-2 border-y border-border/60 bg-gradient-to-r from-muted/40 to-primary/5">
-          <MenuBar editor={editor} />
-        </div>
+        {/* Formatting toolbar — hidden in read-only mode */}
+        {!readOnly && (
+          <div className="px-6 py-2 border-y border-border/60 bg-gradient-to-r from-muted/40 to-primary/5">
+            <MenuBar editor={editor} />
+          </div>
+        )}
 
         {/* TipTap editor area */}
         <div className="p-6 min-h-[450px]">

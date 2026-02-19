@@ -29,6 +29,7 @@ interface UseAutosaveOptions {
   title: string
   tags: string[]
   delay?: number        // debounce delay in ms (default: 2000)
+  disabled?: boolean    // when true, autosave is suppressed (read-only mode)
 }
 
 /**
@@ -39,7 +40,7 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim()
 }
 
-export function useAutosave({ postId, content, title, tags, delay = 2000 }: UseAutosaveOptions) {
+export function useAutosave({ postId, content, title, tags, delay = 2000, disabled = false }: UseAutosaveOptions) {
   const [status, setStatus] = useState<AutosaveStatus>('idle')
 
   // Debounce all inputs together as a single string to trigger one save
@@ -75,8 +76,8 @@ export function useAutosave({ postId, content, title, tags, delay = 2000 }: UseA
       return
     }
 
-    // Don't save if there's no meaningful content
-    if (!debouncedTitle && !debouncedContent) return
+    // Don't save in read-only mode or if there's no meaningful content
+    if (disabled || (!debouncedTitle && !debouncedContent)) return
 
     async function save() {
       setStatus('saving')
