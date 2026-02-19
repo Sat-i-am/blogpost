@@ -9,8 +9,8 @@
 
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import Link from "next/link"
-import { PenSquare } from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
+import Navbar from "@/components/Navbar"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -31,39 +31,20 @@ export const metadata: Metadata = {
   description: "A modern blog platform built with Next.js and TipTap",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
-        {/* Site-wide navigation */}
-        <header className="sticky top-0 z-50 border-b border-primary/10 bg-background/80 backdrop-blur-md">
-          <nav className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold tracking-tight hover:opacity-80 transition-opacity">
-              <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">Blog</span><span className="text-primary">.</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/my-posts"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                My Posts
-              </Link>
-              <Link
-                href="/editor"
-                className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground rounded-lg hover:opacity-90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30"
-              >
-                <PenSquare className="size-4" />
-                Write
-              </Link>
-            </div>
-          </nav>
-        </header>
+        <Navbar isLoggedIn={!!user} />
 
         <main className="min-h-[calc(100vh-65px)]">
           {children}

@@ -46,21 +46,15 @@ export default function SignupPage() {
         setServerError(null)
 
         try {
-            // TODO: Replace with your actual signup API endpoint
-            //   const response = await fetch('/api/auth/signup', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({
-            //       name: data.name,
-            //       email: data.email,
-            //       password: data.password,
-            //     }),
-            //   })
             const { error } = await supabase.auth.signUp({
                 email: data.email,
                 password: data.password,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/protected`,
+                    // After the user clicks the confirmation email link,
+                    // Supabase redirects to this URL with a `?code=` param.
+                    // The /auth/callback route (app/auth/callback/route.ts) handles
+                    // that code and exchanges it for a real session.
+                    emailRedirectTo: `${window.location.origin}/auth/callback`,
                 },
             }) 
             if (error) {

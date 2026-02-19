@@ -1,14 +1,20 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
- 
-// This function can be marked `async` if using `await` inside
-export function proxy(request: NextRequest) {
-  return NextResponse.redirect(new URL('/home', request.url))
+import { type NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase/proxy'
+
+export async function proxy(request: NextRequest) {
+  // update user's auth session
+  return await updateSession(request)
 }
- 
-// Alternatively, you can use a default export:
-// export default function proxy(request: NextRequest) { ... }
- 
+
 export const config = {
-  matcher: '/about/:path*',
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
