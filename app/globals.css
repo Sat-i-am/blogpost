@@ -224,9 +224,6 @@
 }
 
 /* Column-half */
-body {
-  overflow: hidden;
-}
 
 .column-half {
   display: flex;
