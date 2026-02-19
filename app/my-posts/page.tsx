@@ -14,6 +14,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Calendar, Clock, Edit, Trash2, Loader2 } from 'lucide-react'
 import { BlogPost } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
 
 /**
  * Calculate reading time from HTML content.
@@ -39,11 +40,19 @@ export default function MyPostsPage() {
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // Fetch all posts for the current user
+  // Fetch all posts for the current user.
+  // We call supabase.auth.getUser() here to get the email from the active session.
+  // getUser() is async (network call to validate the cookie), so we store the result
+  // in a local variable — no useState needed for the email itself since we only use
+  // it once to kick off the fetch.
   useEffect(() => {
     async function fetchPosts() {
       try {
-        const res = await fetch('/api/posts?username=satyam')
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user?.email) return
+
+        const res = await fetch(`/api/posts?username=${encodeURIComponent(user.email)}`)
         if (res.ok) {
           const data = await res.json()
           setPosts(data)
@@ -77,21 +86,10 @@ export default function MyPostsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="max-w-5xl mx-auto px-6 py-16">
-        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-          <Loader2 className="size-5 animate-spin" />
-          Loading your posts...
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12">
-      {/* Page header */}
-      <div className="mb-8">
+    <div className="max-w-5xl mx-auto px-6 py-12 flex flex-col h-[calc(100vh-65px)]">
+      {/* Page header — stays fixed while posts scroll */}
+      <div className="mb-6 shrink-0">
         <h1 className="text-4xl font-bold mb-2">
           <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
             My Posts
@@ -102,19 +100,25 @@ export default function MyPostsPage() {
         </p>
       </div>
 
-      {/* Posts grid */}
-      {posts.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground mb-4">You haven't created any posts yet</p>
-          <Link
-            href="/editor"
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground rounded-lg hover:opacity-90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30"
-          >
-            Create Your First Post
-          </Link>
-        </div>
-      ) : (
-        <div className="grid gap-5 sm:grid-cols-2">
+      {/* Scrollable posts area — flex-1 takes remaining height, min-h-0 allows it to shrink and scroll */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 text-muted-foreground py-16">
+            <Loader2 className="size-5 animate-spin" />
+            Loading your posts...
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-muted-foreground mb-4">You haven't created any posts yet</p>
+            <Link
+              href="/editor"
+              className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground rounded-lg hover:opacity-90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30"
+            >
+              Create Your First Post
+            </Link>
+          </div>
+        ) : (
+        <div className="grid gap-5 sm:grid-cols-2 pb-8">
           {posts.map((post) => (
             <div
               key={post.id}
@@ -196,7 +200,8 @@ export default function MyPostsPage() {
             </div>
           ))}
         </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

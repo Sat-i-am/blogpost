@@ -214,7 +214,6 @@ export default function BlogEditor({
       tags,
       createdAt: new Date().toISOString(),   // Prisma ignores this on update (uses @default(now()) for create)
       updatedAt: new Date().toISOString(),   // Prisma auto-updates this via @updatedAt
-      username: "satyam",
       published,
     }
   }

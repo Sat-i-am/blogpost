@@ -14,6 +14,7 @@
  */
 
 import { storage } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 // Hint: import NextRequest and NextResponse from 'next/server'
@@ -95,7 +96,19 @@ export async function POST(request: NextRequest) {
 //
 //   YOUR CODE HERE
     try {
+        // Read the authenticated user from the session cookie server-side.
+        // This is unforgeable — the client cannot send a fake email.
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user?.email) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
         const post = await request.json();
+        // Override username with the real email from the auth session.
+        // We never trust what the client sends for this field.
+        post.username = user.email;
         const saved = await storage.savePost(post);
         return NextResponse.json(saved);
     } catch (error) {
