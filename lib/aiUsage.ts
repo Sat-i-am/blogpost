@@ -29,7 +29,7 @@ const DAILY_TOKEN_LIMIT = 50_000
 // Returns today's date as "YYYY-MM-DD" — used as the daily key in the DB.
 // e.g. "2025-02-20". Slicing ISO string is simpler and timezone-safe enough here.
 function today(): string {
-  return new Date().toISOString().slice(0, 10)
+  return new Date().toISOString().slice(0, 10) 
 }
 
 /**
