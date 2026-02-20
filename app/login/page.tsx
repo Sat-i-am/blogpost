@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -26,6 +26,20 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null)
 
   const supabase = createClient()
+
+  // Wake up the collab server (e.g. on Render) to avoid cold start when user later opens the editor.
+  useEffect(() => {
+    const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL
+    if (!wsUrl) return
+
+    const ws = new WebSocket(wsUrl)
+    ws.onopen = () => ws.close() // Connection established — server is awake; close immediately.
+    ws.onerror = () => {} // Ignore errors (e.g. server still spinning up); the request still triggers wake-up.
+
+    return () => {
+      if (ws.readyState === WebSocket.CONNECTING) ws.close()
+    }
+  }, [])
 
   const {
     register,
