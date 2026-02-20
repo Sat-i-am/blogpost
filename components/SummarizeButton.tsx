@@ -20,17 +20,41 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
 
     setLoading(true)
     setError('')
+    setSummary('')
+
     try {
       const res = await fetch('/api/ai/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ markdown }),
       })
-      const data = await res.json()
+
+      // Non-2xx means a JSON error response (auth failure, limit exceeded, etc.)
       if (!res.ok) {
+        const data = await res.json()
         setError(data.error || 'Failed to generate summary')
-      } else {
-        setSummary(data.summary)
+        setLoading(false)
+        return
+      }
+
+      // Stream the plain-text response chunk by chunk
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let isFirst = true
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+
+        // Hide the spinner on the first chunk — text is already arriving
+        if (isFirst) {
+          setLoading(false)
+          isFirst = false
+        }
+
+        setSummary((prev) => prev + chunk)
       }
     } catch {
       setError('Failed to generate summary')
@@ -57,7 +81,7 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
         />
       )}
 
-      {/* Slide-in panel from the right */}
+      {/* Slide-in panel — always in DOM so the translate animation works */}
       <div
         className={`fixed top-0 right-0 h-full w-[380px] z-50 bg-background border-l border-border shadow-2xl transition-transform duration-300 flex flex-col ${
           open ? 'translate-x-0' : 'translate-x-full'
@@ -88,7 +112,8 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
-          {summary && !loading && (
+          {/* Render as it streams in — whitespace-pre-line preserves the • bullet newlines */}
+          {summary && (
             <p className="text-sm leading-relaxed text-foreground whitespace-pre-line">
               {summary}
             </p>
