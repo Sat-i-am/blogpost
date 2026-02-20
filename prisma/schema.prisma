@@ -16,6 +16,14 @@ datasource db {
 
 // Post table — stores all blog posts (drafts and published).
 // Each field becomes a column in the database.
+model AiUsage {
+  username   String
+  date       String   // "2025-02-20" — one row per user per day, resets automatically
+  tokensUsed Int      @default(0)
+
+  @@id([username, date])
+}
+
 model Post {
   id        String   @id @default(uuid())    // Primary key — auto-generated UUID for each post
   title     String                            // Post title entered by the user

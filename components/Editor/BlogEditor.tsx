@@ -64,9 +64,11 @@ export default function BlogEditor({
 
   const [title, setTitle] = useState(initialTitle)
   const [tags, setTags] = useState<string[]>(initialTags)
+  const [generatingTags, setGeneratingTags] = useState(false)
   const [tagInput, setTagInput] = useState('')   // current text being typed in the tag input
   const [content, setContent] = useState(initialContent)
   const tagInputRef = useRef<HTMLInputElement>(null)
+  // console.log("this is content",content)
 
   /**
    * Handle tag input changes.
@@ -178,7 +180,7 @@ export default function BlogEditor({
       provider.off('synced', handleSync)
     }
   }, [editor, provider])
-  console.log("initialcontent",initialContent)
+  // console.log("initialcontent",initialContent)
 
   // Autosave — debounces content/title and saves via API every 2s
   const { status } = useAutosave({ postId: id, content, title, tags, disabled: readOnly })
@@ -272,6 +274,24 @@ export default function BlogEditor({
     })
     onPublish?.(post)
   }
+  async function generateAiTags() {
+    if (!content) return
+    setGeneratingTags(true)
+    try {
+      const res = await fetch('/api/ai/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: htmlToMarkdown(content) }),
+      })
+      const { tags: suggested } = await res.json()
+      console.log("generated ai tags", suggested)
+      if (Array.isArray(suggested)) {
+        setTags((prev) => [...new Set([...prev, ...suggested])])
+      }
+    } finally {
+      setGeneratingTags(false)
+    }
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -351,6 +371,7 @@ export default function BlogEditor({
             ))}
 
             {!readOnly && (
+              <>
               <input
                 ref={tagInputRef}
                 type="text"
@@ -360,6 +381,15 @@ export default function BlogEditor({
                 placeholder={tags.length === 0 ? 'Type #tag and press space...' : 'Add more...'}
                 className="flex-1 min-w-[120px] text-sm bg-transparent outline-none placeholder:text-muted-foreground/40"
               />
+              <button
+                onClick={generateAiTags}
+                disabled={generatingTags}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border border-primary/20 hover:bg-primary/10 transition-colors disabled:opacity-50"
+              >
+                {generatingTags ? <Loader2 className="size-3 animate-spin" /> : null}
+                {generatingTags ? 'Generating...' : 'AI tags'}
+              </button>
+                </>
             )}
           </div>
         </div>
