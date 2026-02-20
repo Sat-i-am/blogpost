@@ -29,6 +29,7 @@ import { useAutosave } from '@/hooks/useAutosave'
 import { htmlToMarkdown } from '@/lib/markdown'
 import { uniqueSlug } from '@/lib/slugify'
 import { BlogPost } from '@/lib/types'
+import SummarizeButton from '@/components/SummarizeButton'
 import * as Y from 'yjs'
 import { HocuspocusProvider } from '@hocuspocus/provider'
 import Collaboration from '@tiptap/extension-collaboration'
@@ -311,7 +312,7 @@ export default function BlogEditor({
                 className="flex-1 text-3xl font-bold bg-transparent outline-none placeholder:text-muted-foreground/40 leading-tight"
               />
             )}
-            {!readOnly && (
+            {!readOnly ? (
               <div className="flex items-center gap-2 shrink-0 pt-1">
                 {/* Autosave status indicator */}
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1">
@@ -342,6 +343,11 @@ export default function BlogEditor({
                   <Send className="size-3.5" />
                   Publish
                 </button>
+                <SummarizeButton markdown={htmlToMarkdown(content)} />
+              </div>
+            ) : (
+              <div className="shrink-0 pt-1">
+                <SummarizeButton markdown={htmlToMarkdown(content)} />
               </div>
             )}
           </div>
