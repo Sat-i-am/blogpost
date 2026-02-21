@@ -97,12 +97,13 @@ export const storage = {
     tags: string[]
     username: string
     published: boolean
+    allowCollaboration?: boolean
   }) {
     // YOUR CODE HERE
     return prisma.post.upsert({
       where:{id:post.id},
       create:{
-        id:post.id,          // FIX: include id in create — we generate it on the client side
+        id:post.id,
         title:post.title,
         slug:post.slug,
         content:post.content,
@@ -111,6 +112,7 @@ export const storage = {
         tags:post.tags,
         username:post.username,
         published:post.published,
+        allowCollaboration: post.allowCollaboration ?? false,
       },
       update:{
         title:post.title,
@@ -119,8 +121,10 @@ export const storage = {
         markdown:post.markdown,
         excerpt:post.excerpt,
         tags:post.tags,
-        username:post.username,
+        // username intentionally omitted — post author never changes on update
         published:post.published,
+        // undefined → Prisma skips the field (only set by explicit publish action)
+        allowCollaboration: post.allowCollaboration,
       },
     })
   },

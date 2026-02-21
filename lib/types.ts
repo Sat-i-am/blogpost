@@ -13,6 +13,7 @@ export interface BlogPost {
   tags: string[]        // User-defined tags for categorization and filtering
   createdAt: string     // ISO 8601 timestamp — set once on first save
   updatedAt: string     // ISO 8601 timestamp — updated on every save
-  username?: string     // Author email — set server-side from auth session, optional on client
-  published: boolean    // false = draft (only visible in editor), true = visible on feed
+  username?: string          // Author email — set server-side from auth session, optional on client
+  published: boolean         // false = draft (only visible in editor), true = visible on feed
+  allowCollaboration?: boolean  // true = any authenticated user can edit this post
 }

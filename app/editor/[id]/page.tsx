@@ -30,18 +30,13 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   const [post, setPost] = useState<BlogPost | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [isAuthor, setIsAuthor] = useState(false)
+  const [currentUser, setCurrentUser] = useState('')
 
   useEffect(() => {
     async function loadPost() {
-      // If we're in forced view mode, skip the auth check entirely
-      if (viewMode) {
-        const response = await fetch(`/api/posts/${id}`)
-        if (!response.ok) { setNotFound(true); return }
-        setPost(await response.json())
-        return
-      }
-
-      // Otherwise fetch post and current user in parallel to determine authorship
+      // Always fetch both the post and the current user in parallel.
+      // The user's email is used as the caret name in collaborative editing,
+      // and to determine authorship for Draft/Publish access.
       const supabase = createClient()
       const [response, { data: { user } }] = await Promise.all([
         fetch(`/api/posts/${id}`),
@@ -55,7 +50,14 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
       const data: BlogPost = await response.json()
       setPost(data)
-      setIsAuthor(!!user?.email && user.email === data.username)
+
+      if (user?.email) {
+        setCurrentUser(user.email)
+        // Only grant author-level access when not in forced view mode
+        if (!viewMode) {
+          setIsAuthor(user.email === data.username)
+        }
+      }
     }
     loadPost()
   }, [id, viewMode])
@@ -80,6 +82,12 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   // Show nothing while loading from API
   if (!post) return null
 
+  // readOnly when:
+  //   - ?mode=view is in the URL (forced view, always read-only), OR
+  //   - the user is not the author AND the post doesn't allow collaboration
+  const allowCollaboration = post.allowCollaboration ?? false
+  const readOnly = viewMode || (!isAuthor && !allowCollaboration)
+
   return (
     <div className="max-w-4xl mx-auto py-10 px-6">
       <BlogEditor
@@ -87,8 +95,11 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         initialTitle={post.title}
         initialContent={post.content}
         initialTags={post.tags}
-        onPublish={(updated) => router.push(`/post/${updated.slug}`)}
-        readOnly={viewMode || !isAuthor}
+        initialAllowCollaboration={allowCollaboration}
+        onPublish={(updated) => router.push(`/editor/${updated.id}`)}
+        readOnly={readOnly}
+        isOwner={isAuthor}
+        collaboratorName={currentUser}
       />
     </div>
   )

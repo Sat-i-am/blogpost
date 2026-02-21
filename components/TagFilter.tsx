@@ -25,7 +25,7 @@ export default function TagFilter({ tags, selectedTags, onTagToggle }: TagFilter
           <button
             key={tag}
             onClick={() => onTagToggle(tag)}
-            className={`px-3.5 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
+            className={`px-3.5 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 cursor-pointer ${
               isSelected
                 ? 'bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground border-primary shadow-sm shadow-primary/25'
                 : 'bg-card text-muted-foreground border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5'

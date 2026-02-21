@@ -22,7 +22,7 @@ import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { Save, Send, Loader2, Check, Hash, X } from 'lucide-react'
+import { Save, Send, Loader2, Check, Hash, X, Users, Lock } from 'lucide-react'
 import MenuBar from './Menubar'
 import { useAutosave } from '@/hooks/useAutosave'
 // REMOVED: import { storage } from '@/lib/storage'
@@ -42,6 +42,9 @@ interface BlogEditorProps {
   initialTags?: string[]
   onPublish?: (post: BlogPost) => void
   readOnly?: boolean
+  isOwner?: boolean                    // true = current user is the post author (can Draft/Publish)
+  initialAllowCollaboration?: boolean  // existing allowCollaboration value from the post
+  collaboratorName?: string            // display name for this user's caret (defaults to 'User N')
 }
 
 /**
@@ -59,6 +62,9 @@ export default function BlogEditor({
   initialTags = [],
   onPublish,
   readOnly = false,
+  isOwner = true,
+  initialAllowCollaboration = false,
+  collaboratorName,
 }: BlogEditorProps) {
   // Generate a stable post ID for new posts (useMemo so it doesn't change on re-render)
   const id = useMemo(() => postId || crypto.randomUUID(), [postId])
@@ -68,8 +74,9 @@ export default function BlogEditor({
   const [generatingTags, setGeneratingTags] = useState(false)
   const [tagInput, setTagInput] = useState('')   // current text being typed in the tag input
   const [content, setContent] = useState(initialContent)
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false)
+  const [allowCollab, setAllowCollab] = useState(initialAllowCollaboration)
   const tagInputRef = useRef<HTMLInputElement>(null)
-  // console.log("this is content",content)
 
   /**
    * Handle tag input changes.
@@ -111,10 +118,10 @@ export default function BlogEditor({
   function removeTag(tag: string) {
     setTags((prev) => prev.filter((t) => t !== tag))
   }
+
   // Create a Yjs document (the shared data structure)
   const ydoc = useMemo(() => new Y.Doc(), [])
 
- 
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null)
 
   useEffect(() => {
@@ -127,7 +134,19 @@ export default function BlogEditor({
     return () => p.destroy()  // cleanup on unmount
   }, [id, ydoc])
 
+  // Stable caret name — use the real user email if provided, otherwise a random label
+  const caretName = useMemo(
+    () => collaboratorName || ('User ' + Math.floor(Math.random() * 100)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [collaboratorName]
+  )
+
   // TipTap editor setup
+  // IMPORTANT: Always initialize with editable:true so that:
+  //   1. Yjs (Collaboration extension) can properly sync documents
+  //   2. CollaborationCaret can render remote cursors as decorations
+  // After the editor is ready we call editor.setEditable(!readOnly) below,
+  // which prevents user input in view-only mode while keeping Yjs active.
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -142,17 +161,26 @@ export default function BlogEditor({
       ...(provider ? [CollaborationCaret.configure({
         provider,
         user: {
-          name: 'User ' + Math.floor(Math.random() * 100),
+          name: caretName,
           color: ['#f8a4a4', '#a4d4f8', '#a4f8b4', '#f8d4a4', '#d4a4f8', '#f8a4d4', '#a4f8e4', '#f8f4a4'][Math.floor(Math.random() * 8)],
         },
       })] : []),
     ],
-    editable: !readOnly,
+    editable: true,            // Always start editable — see note above
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       setContent(editor.getHTML())
     },
   },[provider])
+
+  // Apply read-only AFTER the editor is fully initialized.
+  // setEditable(false) disables user input but does NOT prevent Yjs from
+  // applying remote updates — those bypass the editable check entirely.
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(!readOnly)
+    }
+  }, [editor, readOnly])
 
   // Load existing content into the Yjs document once editor + provider are ready.
   // This only runs once: checks if the Yjs doc is empty (no prior collab session),
@@ -181,35 +209,16 @@ export default function BlogEditor({
       provider.off('synced', handleSync)
     }
   }, [editor, provider])
-  // console.log("initialcontent",initialContent)
 
   // Autosave — debounces content/title and saves via API every 2s
   const { status } = useAutosave({ postId: id, content, title, tags, disabled: readOnly })
 
   /**
    * Build a complete BlogPost object from current editor state.
-   * Used by both Save Draft and Publish buttons.
-   *
-   * WHAT CHANGED:
-   * Before: storage.getAllPosts() to get existing slugs, storage.getPostById() for createdAt
-   * After:  We skip slug duplicate checking (DB handles it with @unique constraint)
-   *         We don't need to fetch createdAt — Prisma handles it automatically
-   *
-   * Hint: The post object is simpler now:
-   *   {
-   *     id,
-   *     title,
-   *     slug: uniqueSlug(title || 'untitled', []),   ← empty array, DB handles uniqueness
-   *     content,
-   *     markdown: htmlToMarkdown(content),
-   *     excerpt: stripHtml(content).slice(0, 150),
-   *     tags,
-   *     createdAt: new Date().toISOString(),          ← Prisma ignores this on update (uses @updatedAt)
-   *     updatedAt: new Date().toISOString(),
-   *     published,
-   *   }
+   * allowCollaboration is only included when explicitly set (e.g. at publish time).
+   * When undefined, Prisma skips updating the field — so autosave never changes it.
    */
-  function buildPost(published: boolean): BlogPost {
+  function buildPost(published: boolean, allowCollaboration?: boolean): BlogPost {
     return {
       id,
       title,
@@ -218,27 +227,15 @@ export default function BlogEditor({
       markdown: htmlToMarkdown(content),
       excerpt: stripHtml(content).slice(0, 150),
       tags,
-      createdAt: new Date().toISOString(),   // Prisma ignores this on update (uses @default(now()) for create)
-      updatedAt: new Date().toISOString(),   // Prisma auto-updates this via @updatedAt
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       published,
+      allowCollaboration,  // undefined → Prisma skips on update (only set from publish dialog)
     }
   }
 
   /**
    * Save as draft (published = false).
-   *
-   * BEFORE: storage.savePost(post)  — synchronous
-   * AFTER:  fetch('/api/posts', { method: 'POST', ... })  — async
-   *
-   * Hint: Make this function async:
-   *   async function handleSaveDraft() {
-   *     const post = buildPost(false)
-   *     await fetch('/api/posts', {
-   *       method: 'POST',
-   *       headers: { 'Content-Type': 'application/json' },
-   *       body: JSON.stringify(post),
-   *     })
-   *   }
    */
   async function handleSaveDraft() {
     const post = buildPost(false)
@@ -250,24 +247,19 @@ export default function BlogEditor({
   }
 
   /**
-   * Publish the post (published = true) and notify parent.
-   *
-   * BEFORE: storage.savePost(post)  — synchronous
-   * AFTER:  fetch('/api/posts', { method: 'POST', ... })  — async
-   *
-   * Hint: Same as draft but with published = true, and call onPublish after:
-   *   async function handlePublish() {
-   *     const post = buildPost(true)
-   *     await fetch('/api/posts', {
-   *       method: 'POST',
-   *       headers: { 'Content-Type': 'application/json' },
-   *       body: JSON.stringify(post),
-   *     })
-   *     onPublish?.(post)
-   *   }
+   * Open the publish options dialog instead of publishing immediately.
    */
-  async function handlePublish() {
-    const post = buildPost(true)
+  function handlePublish() {
+    setPublishDialogOpen(true)
+  }
+
+  /**
+   * Called from the publish dialog once the user picks an option.
+   */
+  async function handlePublishConfirm(collab: boolean) {
+    setPublishDialogOpen(false)
+    setAllowCollab(collab)
+    const post = buildPost(true, collab)
     await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -275,6 +267,7 @@ export default function BlogEditor({
     })
     onPublish?.(post)
   }
+
   async function generateAiTags() {
     if (!content) return
     setGeneratingTags(true)
@@ -296,6 +289,71 @@ export default function BlogEditor({
 
   return (
     <div className="w-full max-w-4xl mx-auto">
+      {/* ── Publish options dialog ─────────────────────────────────────────── */}
+      {publishDialogOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/40"
+            onClick={() => setPublishDialogOpen(false)}
+          />
+          {/* Centered dialog */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-sm p-6">
+              <h3 className="text-lg font-semibold mb-1">Publishing options</h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Choose who can edit this post after publishing.
+              </p>
+
+              <div className="space-y-3 mb-6">
+                {/* Allow edits option */}
+                <button
+                  onClick={() => handlePublishConfirm(true)}
+                  className="w-full text-left p-4 border border-border rounded-xl hover:border-green-500/40 hover:bg-green-500/5 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                      <Users className="size-4 text-green-600" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">Allow edits by all</div>
+                      <div className="text-xs text-muted-foreground">
+                        Anyone can collaborate on this post
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Don't allow edits option */}
+                <button
+                  onClick={() => handlePublishConfirm(false)}
+                  className="w-full text-left p-4 border border-border rounded-xl hover:border-amber-500/40 hover:bg-amber-500/5 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                      <Lock className="size-4 text-amber-600" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">Don&apos;t allow edits</div>
+                      <div className="text-xs text-muted-foreground">
+                        Only you can edit this post
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setPublishDialogOpen(false)}
+                className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Editor card container */}
       <div className="border border-border/80 rounded-2xl bg-card shadow-sm shadow-primary/5 overflow-hidden">
         {/* Header: title + actions */}
@@ -329,20 +387,25 @@ export default function BlogEditor({
                     </>
                   )}
                 </span>
-                <button
-                  onClick={handleSaveDraft}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Save className="size-3.5" />
-                  Draft
-                </button>
-                <button
-                  onClick={handlePublish}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground rounded-lg hover:opacity-90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30"
-                >
-                  <Send className="size-3.5" />
-                  Publish
-                </button>
+                {/* Draft / Publish — only shown to the post owner */}
+                {isOwner && (
+                  <>
+                    <button
+                      onClick={handleSaveDraft}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border rounded-lg hover:bg-muted transition-colors cursor-pointer"
+                    >
+                      <Save className="size-3.5" />
+                      Draft
+                    </button>
+                    <button
+                      onClick={handlePublish}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground rounded-lg hover:opacity-90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30 cursor-pointer"
+                    >
+                      <Send className="size-3.5" />
+                      Publish
+                    </button>
+                  </>
+                )}
                 <SummarizeButton markdown={htmlToMarkdown(content)} />
               </div>
             ) : (
@@ -368,7 +431,7 @@ export default function BlogEditor({
                 {!readOnly && (
                   <button
                     onClick={(e) => { e.stopPropagation(); removeTag(tag) }}
-                    className="hover:text-destructive transition-colors"
+                    className="hover:text-destructive transition-colors cursor-pointer"
                   >
                     <X className="size-3" />
                   </button>
@@ -390,7 +453,7 @@ export default function BlogEditor({
               <button
                 onClick={generateAiTags}
                 disabled={generatingTags}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border border-primary/20 hover:bg-primary/10 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border border-primary/20 hover:bg-primary/10 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
               >
                 {generatingTags ? <Loader2 className="size-3 animate-spin" /> : null}
                 {generatingTags ? 'Generating...' : 'AI tags'}

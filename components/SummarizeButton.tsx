@@ -67,7 +67,7 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
     <>
       <button
         onClick={handleOpen}
-        className="inline-flex items-center gap-1.5 text-primary hover:underline"
+        className="inline-flex items-center gap-1.5 text-primary hover:underline cursor-pointer"
       >
         <Image src="/aiIcon.png" alt="AI" width={14} height={14} />
         Summarize
@@ -95,7 +95,7 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors"
+            className="p-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer"
           >
             <X className="size-4" />
           </button>

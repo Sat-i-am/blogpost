@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
         const saved = await storage.savePost(post);
         return NextResponse.json(saved);
     } catch (error) {
+        console.log("error in post route",error)
         return NextResponse.json({ error: 'Failed to save post' }, { status: 500 });
     }
 }

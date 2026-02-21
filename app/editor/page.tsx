@@ -2,7 +2,7 @@
  * New Post page — /editor
  *
  * Renders a blank BlogEditor for creating a new post.
- * On publish, redirects the user to the published post's URL (/post/[slug]).
+ * On publish, stays in the editor (the post is now live and editable).
  */
 
 "use client"
@@ -15,7 +15,7 @@ export default function NewPostPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-6">
-      <BlogEditor onPublish={(post) => router.push(`/post/${post.slug}`)} />
+      <BlogEditor onPublish={(post) => router.push(`/editor/${post.id}`)} />
     </div>
   )
 }
