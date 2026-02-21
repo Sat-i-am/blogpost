@@ -15,6 +15,7 @@ import { BlogPost } from '@/lib/types'
 
 interface PostCardProps {
   post: BlogPost
+  currentUserEmail?: string
 }
 
 /**
@@ -36,7 +37,8 @@ function formatDate(iso: string): string {
   })
 }
 
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, currentUserEmail }: PostCardProps) {
+  const canEdit = post.allowCollaboration || post.username === currentUserEmail
   return (
     <div className="h-full border border-border/80 rounded-xl p-6 bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 group flex flex-col">
       {/* Tags */}
@@ -92,13 +94,19 @@ export default function PostCard({ post }: PostCardProps) {
           <Eye className="size-3.5" />
           View
         </Link>
-        <Link
-          href={`/editor/${post.id}`}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg hover:bg-muted transition-colors"
-        >
-          <Pencil className="size-3.5" />
-          Edit
-        </Link>
+        {canEdit ? (
+          <Link
+            href={`/editor/${post.id}`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg hover:bg-muted transition-colors"
+          >
+            <Pencil className="size-3.5" />
+            Edit
+          </Link>
+        ) : (
+          <div className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-muted/50 text-muted-foreground/60 cursor-not-allowed select-none">
+            No edit permissions
+          </div>
+        )}
       </div>
     </div>
   )

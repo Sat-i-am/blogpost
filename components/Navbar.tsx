@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { PenSquare, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
 export default function Navbar() {
   const router = useRouter()
+  const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
+  const isHome = pathname === '/'
 
   useEffect(() => {
     // createClient() is called here inside useEffect so it only ever runs in the
@@ -36,7 +38,9 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-primary/10 bg-background/80 backdrop-blur-md">
       <nav className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-2xl font-bold tracking-tight hover:opacity-80 transition-opacity">
-          <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">Blog</span>
+          <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+            {isHome ? 'Blog' : 'All Posts'}
+          </span>
           <span className="text-primary">.</span>
         </Link>
 

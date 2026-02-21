@@ -16,16 +16,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { PenSquare } from 'lucide-react'
-// REMOVED: import { storage } from '@/lib/storage'   ← no longer needed
 import { BlogPost } from '@/lib/types'
 import PostCard from '@/components/PostCard'
 import SearchBar from '@/components/SearchBar'
 import TagFilter from '@/components/TagFilter'
+import { createClient } from '@/lib/supabase/client'
 
 export default function HomePage() {
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | undefined>()
 
   /**
    * Load published posts from the API on mount.
@@ -44,13 +45,16 @@ export default function HomePage() {
    *   }, [])
    */
   useEffect(() => {
-    // YOUR CODE HERE — fetch from /api/posts and setPosts with the result
     async function loadPosts(){
       const res = await fetch('/api/posts');
       const data = await res.json();
       setPosts(data);
     }
     loadPosts()
+
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      setCurrentUserEmail(user?.email ?? undefined)
+    })
   }, [])
 
   // Collect all unique tags from published posts (for the tag filter)
@@ -102,7 +106,7 @@ export default function HomePage() {
       {filteredPosts.length > 0 ? (
         <div className="grid gap-5 sm:grid-cols-2">
           {filteredPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} currentUserEmail={currentUserEmail} />
           ))}
         </div>
       ) : (
