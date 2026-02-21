@@ -67,10 +67,10 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
     <>
       <button
         onClick={handleOpen}
-        className="inline-flex items-center gap-1.5 text-primary hover:underline cursor-pointer"
+        className="inline-flex items-center gap-1.5 text-primary cursor-pointer"
       >
-        <Image src="/aiIcon.png" alt="AI" width={14} height={14} />
-        Summarize
+        <Image src="/aiIcon.png" alt="AI" width={16} height={16} className=' animate-bounce'/>
+        <p>Summarize</p>
       </button>
 
       {/* Backdrop — clicking it closes the panel */}

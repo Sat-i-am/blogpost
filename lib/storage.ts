@@ -54,17 +54,6 @@ export const storage = {
   },
 
   /**
-   * Find a single post by its URL slug. Used by /post/[slug] route.
-   *
-   * Hint: prisma.post.findUnique({ where: { ??? } })
-   * slug is marked @unique in schema, so findUnique works here
-   */
-  async getPostBySlug(slug: string) {
-    // YOUR CODE HERE
-    return  prisma.post.findUnique({where:{slug}})
-  },
-
-  /**
    * Find a single post by its ID. Used by /editor/[id] route.
    *
    * Hint: prisma.post.findUnique({ where: { ??? } })

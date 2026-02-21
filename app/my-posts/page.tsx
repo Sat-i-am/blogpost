@@ -118,102 +118,104 @@ export default function MyPostsPage() {
             </Link>
           </div>
         ) : (
-        <div className="grid gap-5 sm:grid-cols-2 pb-8">
-          {posts.map((post) => (
-            <div
-              key={post.id}
-              className="relative border border-border/80 rounded-xl p-6 bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 group"
-            >
-              {/* Status badges - positioned absolutely in top right */}
-              <div className="absolute top-4 right-4 flex items-center gap-1.5">
-                {post.published && (
-                  <span
-                    className={`px-2 py-0.5 text-[10px] font-semibold rounded-full inline-flex items-center gap-1 ${
-                      post.allowCollaboration
+          <div className="grid gap-5 sm:grid-cols-2 pb-8">
+            {posts.map((post) => (
+              <div
+                key={post.id}
+                className="border border-border/80 rounded-xl p-6 bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 group flex flex-col justify-between"
+              >
+                <div>
+                  {/* Status badges row — always at the top, full width */}
+                  <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                    <span
+                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-full ${post.published
                         ? 'bg-green-500/10 text-green-600 border border-green-500/20'
                         : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                    }`}
-                  >
-                    {post.allowCollaboration
-                      ? <><Users className="size-3" /> Edits open</>
-                      : <><Lock className="size-3" /> Edits locked</>
-                    }
-                  </span>
-                )}
-                <span
-                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-full ${
-                    post.published
-                      ? 'bg-green-500/10 text-green-600 border border-green-500/20'
-                      : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                  }`}
-                >
-                  {post.published ? 'Published' : 'Draft'}
-                </span>
-              </div>
-
-              {/* Tags */}
-              {post.tags.length > 0 && (
-                <div className="flex gap-1.5 flex-wrap mb-3 pr-20">
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2.5 py-0.5 text-[11px] font-medium rounded-full bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary"
+                        }`}
                     >
-                      {tag}
+                      {post.published ? 'Published' : 'Draft'}
                     </span>
-                  ))}
-                </div>
-              )}
+                    {post.published && (
+                      <span
+                        className={`px-2 py-0.5 text-[10px] font-semibold rounded-full inline-flex items-center gap-1 ${post.allowCollaboration
+                          ? 'bg-green-500/10 text-green-600 border border-green-500/20'
+                          : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                          }`}
+                      >
+                        {post.allowCollaboration
+                          ? <><Users className="size-3" /> Edits open</>
+                          : <><Lock className="size-3" /> Edits locked</>
+                        }
+                      </span>
+                    )}
+                  </div>
 
-              {/* Title */}
-              <Link href={`/editor/${post.id}`}>
-                <h2 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors leading-snug">
-                  {post.title || 'Untitled Post'}
-                </h2>
-              </Link>
-
-              {/* Excerpt */}
-              <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed">
-                {post.excerpt}
-              </p>
-
-              {/* Footer: date & reading time */}
-              <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border/60 mb-3">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="size-3.5" />
-                  <time>{formatDate(post.updatedAt)}</time>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="size-3.5" />
-                  <span>{readingTime(post.content)}</span>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2">
-                <Link
-                  href={`/editor/${post.id}`}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Edit className="size-3.5" />
-                  Edit
-                </Link>
-                <button
-                  onClick={() => handleDelete(post.id, post.title)}
-                  disabled={deletingId === post.id}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border border-destructive/40 text-destructive rounded-lg hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {deletingId === post.id ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="size-3.5" />
+                  {/* Tags */}
+                  {post.tags.length > 0 && (
+                    <div className="flex gap-1.5 flex-wrap mb-3">
+                      {post.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2.5 py-0.5 text-[11px] font-medium rounded-full bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   )}
-                  Delete
-                </button>
+
+                  {/* Title */}
+                  <Link href={`/editor/${post.id}`}>
+                    <h2 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors leading-snug">
+                      {post.title || 'Untitled Post'}
+                    </h2>
+                  </Link>
+
+                  {/* Excerpt */}
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed">
+                    {post.excerpt}
+                  </p>
+                </div>
+
+                <div>
+                  {/* Footer: date & reading time */}
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border/60 mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="size-3.5" />
+                      <time>{formatDate(post.updatedAt)}</time>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="size-3.5" />
+                      <span>{readingTime(post.content)}</span>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/editor/${post.id}`}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Edit className="size-3.5" />
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(post.id, post.title)}
+                      disabled={deletingId === post.id}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border border-destructive/40 text-destructive rounded-lg hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deletingId === post.id ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-3.5" />
+                      )}
+                      Delete
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
