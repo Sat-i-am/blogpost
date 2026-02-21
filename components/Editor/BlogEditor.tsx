@@ -41,6 +41,7 @@ interface BlogEditorProps {
   initialTitle?: string
   initialTags?: string[]
   onPublish?: (post: BlogPost) => void
+  onDraft?: (post: BlogPost) => void
   readOnly?: boolean
   isOwner?: boolean                    // true = current user is the post author (can Draft/Publish)
   initialAllowCollaboration?: boolean  // existing allowCollaboration value from the post
@@ -61,6 +62,7 @@ export default function BlogEditor({
   initialTitle = '',
   initialTags = [],
   onPublish,
+  onDraft,
   readOnly = false,
   isOwner = true,
   initialAllowCollaboration = false,
@@ -255,6 +257,7 @@ export default function BlogEditor({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(post),
     })
+    onDraft?.(post)
   }
 
   /**
