@@ -85,10 +85,9 @@ export const storage = {
     excerpt: string
     tags: string[]
     username: string
-    published: boolean
-    allowCollaboration?: boolean
+    published?: boolean          // optional — only passed by explicit Publish/Draft buttons
+    allowCollaboration?: boolean // optional — only passed by explicit Publish dialog
   }) {
-    // YOUR CODE HERE
     return prisma.post.upsert({
       where:{id:post.id},
       create:{
@@ -100,7 +99,7 @@ export const storage = {
         excerpt:post.excerpt,
         tags:post.tags,
         username:post.username,
-        published:post.published,
+        published: post.published ?? false,  // new posts default to draft
         allowCollaboration: post.allowCollaboration ?? false,
       },
       update:{
@@ -111,7 +110,9 @@ export const storage = {
         excerpt:post.excerpt,
         tags:post.tags,
         // username intentionally omitted — post author never changes on update
-        published:post.published,
+        // published intentionally omitted — undefined → Prisma skips the field.
+        // Only explicit Publish / Draft button actions pass this field.
+        ...(post.published !== undefined ? { published: post.published } : {}),
         // undefined → Prisma skips the field (only set by explicit publish action)
         allowCollaboration: post.allowCollaboration,
       },

@@ -19,7 +19,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useDebounce } from './useDebounce'
 import { htmlToMarkdown } from '@/lib/markdown'
 import { uniqueSlug } from '@/lib/slugify'
-import { BlogPost } from '@/lib/types'
 
 type AutosaveStatus = 'idle' | 'saving' | 'saved'
 
@@ -53,17 +52,13 @@ export function useAutosave({ postId, content, title, tags, delay = 2000, disabl
   // Track the createdAt date so it doesn't change on every save
   const createdAt = useRef<string>(new Date().toISOString())
 
-  // Track the published status so autosave doesn't accidentally unpublish
-  const published = useRef<boolean>(false)
-
-  // On mount, load existing post's createdAt and published status from the API
+  // On mount, load existing post's createdAt from the API
   useEffect(() => {
     async function loadExisting() {
       const res = await fetch(`/api/posts/${postId}`)
       if (res.ok) {
         const existing = await res.json()
         createdAt.current = existing.createdAt
-        published.current = existing.published
       }
     }
     loadExisting()
@@ -83,8 +78,9 @@ export function useAutosave({ postId, content, title, tags, delay = 2000, disabl
     async function save() {
       setStatus('saving')
 
-      // Build the post object
-      const post: BlogPost = {
+      // Build the post object — published is intentionally omitted so autosave
+      // never changes it. Only the explicit Publish / Save Draft buttons set it.
+      const post = {
         id: postId,
         title: debouncedTitle,
         slug: `${uniqueSlug(debouncedTitle || 'untitled', [])}-${postId.slice(0, 8)}`,  // ID suffix mirrors BlogEditor.buildPost — guarantees uniqueness
@@ -94,7 +90,6 @@ export function useAutosave({ postId, content, title, tags, delay = 2000, disabl
         tags,
         createdAt: createdAt.current,
         updatedAt: new Date().toISOString(),
-        published: published.current,  // preserve current published status (don't accidentally unpublish)
       }
 
       // POST to our API route — the API calls storage.savePost() which does a Prisma upsert

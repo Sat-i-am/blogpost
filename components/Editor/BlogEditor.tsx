@@ -45,6 +45,7 @@ interface BlogEditorProps {
   readOnly?: boolean
   isOwner?: boolean                    // true = current user is the post author (can Draft/Publish)
   initialAllowCollaboration?: boolean  // existing allowCollaboration value from the post
+  initialPublished?: boolean           // true = post is already published (hides the Draft button)
   collaboratorName?: string            // display name for this user's caret (defaults to 'User N')
 }
 
@@ -66,6 +67,7 @@ export default function BlogEditor({
   readOnly = false,
   isOwner = true,
   initialAllowCollaboration = false,
+  initialPublished = false,
   collaboratorName,
 }: BlogEditorProps) {
   // Generate a stable post ID for new posts (useMemo so it doesn't change on re-render)
@@ -78,6 +80,7 @@ export default function BlogEditor({
   const [content, setContent] = useState(initialContent)
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
   const [allowCollab, setAllowCollab] = useState(initialAllowCollaboration)
+  const [isPublished, setIsPublished] = useState(initialPublished)
   const tagInputRef = useRef<HTMLInputElement>(null)
 
   /**
@@ -273,6 +276,7 @@ export default function BlogEditor({
   async function handlePublishConfirm(collab: boolean) {
     setPublishDialogOpen(false)
     setAllowCollab(collab)
+    setIsPublished(true)
     const post = buildPost(true, collab)
     await fetch('/api/posts', {
       method: 'POST',
@@ -408,13 +412,16 @@ export default function BlogEditor({
                 {/* Draft / Publish — only shown to the post owner */}
                 {isOwner && (
                   <>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border rounded-lg hover:bg-muted transition-colors cursor-pointer"
-                    >
-                      <Save className="size-3.5" />
-                      Draft
-                    </button>
+                    {/* Draft button hidden once published — a published post can only be re-published */}
+                    {!isPublished && (
+                      <button
+                        onClick={handleSaveDraft}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border rounded-lg hover:bg-muted transition-colors cursor-pointer"
+                      >
+                        <Save className="size-3.5" />
+                        Draft
+                      </button>
+                    )}
                     <button
                       onClick={handlePublish}
                       className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground rounded-lg hover:opacity-90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30 cursor-pointer"

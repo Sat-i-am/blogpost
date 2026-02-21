@@ -90,6 +90,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         initialContent={post?.content ?? ''}
         initialTags={post?.tags ?? []}
         initialAllowCollaboration={allowCollaboration}
+        initialPublished={post?.published ?? false}
         onPublish={() => router.push('/my-posts')}
         onDraft={() => router.push('/my-posts')}
         readOnly={readOnly}
