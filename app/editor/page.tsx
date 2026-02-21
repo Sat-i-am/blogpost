@@ -15,7 +15,10 @@ export default function NewPostPage() {
 
   return (
     <div className="py-10 px-6">
-      <BlogEditor onPublish={(post) => router.push(`/editor/${post.id}`)} />
+      <BlogEditor
+        onPublish={() => router.push('/my-posts')}
+        onDraft={() => router.push('/my-posts')}
+      />
     </div>
   )
 }
