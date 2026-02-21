@@ -4,11 +4,9 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { X, Loader2 } from 'lucide-react'
 
-interface SummarizeButtonProps {
-  markdown: string
-}
+// ── Hook — owns all fetch + streaming state ───────────────────────────────────
 
-export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
+export function useSummarize(markdown: string) {
   const [open, setOpen] = useState(false)
   const [summary, setSummary] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,7 +27,6 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
         body: JSON.stringify({ markdown }),
       })
 
-      // Non-2xx means a JSON error response (auth failure, limit exceeded, etc.)
       if (!res.ok) {
         const data = await res.json()
         setError(data.error || 'Failed to generate summary')
@@ -37,7 +34,6 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
         return
       }
 
-      // Stream the plain-text response chunk by chunk
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
       let isFirst = true
@@ -45,15 +41,8 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-
         const chunk = decoder.decode(value, { stream: true })
-
-        // Hide the spinner on the first chunk — text is already arriving
-        if (isFirst) {
-          setLoading(false)
-          isFirst = false
-        }
-
+        if (isFirst) { setLoading(false); isFirst = false }
         setSummary((prev) => prev + chunk)
       }
     } catch {
@@ -63,63 +52,77 @@ export default function SummarizeButton({ markdown }: SummarizeButtonProps) {
     }
   }
 
+  return {
+    open,
+    handleOpen,
+    handleClose: () => setOpen(false),
+    summary,
+    loading,
+    error,
+  }
+}
+
+// ── Trigger button ────────────────────────────────────────────────────────────
+
+interface SummarizeButtonProps {
+  onClick: () => void
+}
+
+export default function SummarizeButton({ onClick }: SummarizeButtonProps) {
   return (
-    <>
-      <button
-        onClick={handleOpen}
-        className="inline-flex items-center gap-1.5 text-primary cursor-pointer"
-      >
-        <Image src="/aiIcon.png" alt="AI" width={16} height={16} className=' animate-bounce'/>
-        <p>Summarize</p>
-      </button>
+    <button
+      onClick={onClick}
+      className="inline-flex items-center text-primary cursor-pointer animate-bounce hover-text-red-500"
+    >
+      <Image src="/aiIcon.png" alt="AI" width={16} height={16} />
+      <p className='hover-bg-red-500'>Summarize</p>
+    </button>
+  )
+}
 
-      {/* Backdrop — clicking it closes the panel */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/20"
-          onClick={() => setOpen(false)}
-        />
-      )}
+// ── Panel — rendered in the editor flex layout, not as a fixed overlay ────────
 
-      {/* Slide-in panel — always in DOM so the translate animation works */}
-      <div
-        className={`fixed top-0 right-0 h-full w-[380px] z-50 bg-background border-l border-border shadow-2xl transition-transform duration-300 flex flex-col ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        {/* Panel header */}
-        <div className="flex items-center justify-between p-5 border-b border-border shrink-0">
-          <div className="flex items-center gap-2">
-            <Image src="/aiIcon.png" alt="AI" width={18} height={18} />
-            <h2 className="font-semibold text-base">AI Summary</h2>
-          </div>
-          <button
-            onClick={() => setOpen(false)}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer"
-          >
-            <X className="size-4" />
-          </button>
+interface SummarizePanelProps {
+  onClose: () => void
+  summary: string
+  loading: boolean
+  error: string
+}
+
+export function SummarizePanel({ onClose, summary, loading, error }: SummarizePanelProps) {
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between p-5 border-b border-border shrink-0">
+        <div className="flex items-center gap-2">
+          <Image src="/aiIcon.png" alt="AI" width={18} height={18} />
+          <h2 className="font-semibold text-base">AI Summary</h2>
         </div>
-
-        {/* Panel body */}
-        <div className="p-5 overflow-y-auto flex-1">
-          {loading && (
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Loader2 className="size-4 animate-spin" />
-              Summarizing...
-            </div>
-          )}
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-          {/* Render as it streams in — whitespace-pre-line preserves the • bullet newlines */}
-          {summary && (
-            <p className="text-sm leading-relaxed text-foreground whitespace-pre-line">
-              {summary}
-            </p>
-          )}
-        </div>
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer"
+        >
+          <X className="size-4" />
+        </button>
       </div>
-    </>
+
+      {/* Body */}
+      <div className="p-5 overflow-y-auto flex-1">
+        {loading && (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <Loader2 className="size-4 animate-spin" />
+            Summarizing...
+          </div>
+        )}
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
+        {summary && (
+          <p className="text-sm leading-relaxed text-foreground whitespace-pre-line">
+            {summary}
+          </p>
+        )}
+      </div>
+    </div>
   )
 }

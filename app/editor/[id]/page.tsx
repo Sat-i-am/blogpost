@@ -89,7 +89,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   const readOnly = viewMode || (!isAuthor && !allowCollaboration)
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-6">
+    <div className="py-10 px-6">
       <BlogEditor
         postId={post.id}
         initialTitle={post.title}

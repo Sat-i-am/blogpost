@@ -29,7 +29,7 @@ import { useAutosave } from '@/hooks/useAutosave'
 import { htmlToMarkdown } from '@/lib/markdown'
 import { uniqueSlug } from '@/lib/slugify'
 import { BlogPost } from '@/lib/types'
-import SummarizeButton from '@/components/SummarizeButton'
+import SummarizeButton, { SummarizePanel, useSummarize } from '@/components/SummarizeButton'
 import * as Y from 'yjs'
 import { HocuspocusProvider } from '@hocuspocus/provider'
 import Collaboration from '@tiptap/extension-collaboration'
@@ -213,6 +213,16 @@ export default function BlogEditor({
   // Autosave — debounces content/title and saves via API every 2s
   const { status } = useAutosave({ postId: id, content, title, tags, disabled: readOnly })
 
+  // AI summary side panel
+  const {
+    open: summaryOpen,
+    handleOpen: openSummary,
+    handleClose: closeSummary,
+    summary,
+    loading: summaryLoading,
+    error: summaryError,
+  } = useSummarize(htmlToMarkdown(content))
+
   /**
    * Build a complete BlogPost object from current editor state.
    * allowCollaboration is only included when explicitly set (e.g. at publish time).
@@ -288,7 +298,7 @@ export default function BlogEditor({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <>
       {/* ── Publish options dialog ─────────────────────────────────────────── */}
       {publishDialogOpen && (
         <>
@@ -354,8 +364,12 @@ export default function BlogEditor({
         </>
       )}
 
-      {/* Editor card container */}
-      <div className="border border-border/80 rounded-2xl bg-card shadow-sm shadow-primary/5 overflow-hidden">
+      {/* ── Editor + Summary side panel flex layout ───────────────────────── */}
+      <div className="flex items-start w-full">
+
+        {/* Editor column — shrinks when panel is open */}
+        <div className="flex-1 min-w-0">
+        <div className="border border-border/80 rounded-2xl bg-card shadow-sm shadow-primary/5 overflow-hidden">
         {/* Header: title + actions */}
         <div className="p-6 pb-0">
           <div className="flex items-start justify-between gap-4 mb-4">
@@ -406,11 +420,11 @@ export default function BlogEditor({
                     </button>
                   </>
                 )}
-                <SummarizeButton markdown={htmlToMarkdown(content)} />
+                <SummarizeButton onClick={openSummary} />
               </div>
             ) : (
               <div className="shrink-0 pt-1">
-                <SummarizeButton markdown={htmlToMarkdown(content)} />
+                <SummarizeButton onClick={openSummary} />
               </div>
             )}
           </div>
@@ -475,6 +489,23 @@ export default function BlogEditor({
           <EditorContent editor={editor} />
         </div>
       </div>
-    </div>
+        </div>{/* end editor column */}
+
+        {/* Summary panel column — sticky side panel that squeezes the editor */}
+        <div
+          className={`shrink-0 sticky top-[65px] h-[calc(100vh-65px)] transition-[width] duration-300 overflow-hidden border-l border-border bg-background ${
+            summaryOpen ? 'w-[350px]' : 'w-0'
+          }`}
+        >
+          <SummarizePanel
+            onClose={closeSummary}
+            summary={summary}
+            loading={summaryLoading}
+            error={summaryError}
+          />
+        </div>
+
+      </div>{/* end flex layout */}
+    </>
   )
 }
