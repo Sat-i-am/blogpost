@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     messages: [
       {
         role: 'system',
-        content: `You are a helpful assistant answering questions about a blog post, try to keep it in brief. Always try to make the answer more accurate by adding something from general aspect and try to use blog references as examples, if you think you can add something to make the answer more comprehensive and better then feel free to add it.\n\nBlog content:\n${markdown.slice(0, 5000)}`, //only giving first 5000 words if the content is very large
+        content: `You are a helpful assistant answering questions about a blog post, try to keep it in brief in max 500-600 words. Always try to make the answer more accurate by adding something from general aspect and try to use blog references as examples, if you think you can add something to make the answer more comprehensive and better then feel free to add it.\n\nBlog content:\n${markdown.slice(0, 5000)}`, //only giving first 5000 words if the content is very large
       },
       ...messages.map((m: { role: string; content: string }) => ({
         role: m.role,
