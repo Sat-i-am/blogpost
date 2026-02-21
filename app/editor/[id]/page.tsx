@@ -4,10 +4,6 @@
  * Loads an existing post by ID and renders the BlogEditor
  * pre-filled with the post's title, content, and tags.
  * On publish, redirects to the updated post's URL.
- *
- * WHAT CHANGED (Supabase migration):
- * Before: storage.getPostById(id) — direct localStorage call
- * After:  fetch(`/api/posts/${id}`) — HTTP request to our API route
  */
 
 "use client"
@@ -16,8 +12,7 @@ import { use, useState, useEffect } from 'react'
 import BlogEditor from '@/components/Editor/BlogEditor'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { BlogPost } from '@/lib/types'
-import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
+import { AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,77 +23,76 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   const viewMode = searchParams.get('mode') === 'view'
 
   const [post, setPost] = useState<BlogPost | null>(null)
-  const [notFound, setNotFound] = useState(false)
+  const [fetchWarning, setFetchWarning] = useState(false)
   const [isAuthor, setIsAuthor] = useState(false)
   const [currentUser, setCurrentUser] = useState('')
 
   useEffect(() => {
     async function loadPost() {
-      // Always fetch both the post and the current user in parallel.
-      // The user's email is used as the caret name in collaborative editing,
-      // and to determine authorship for Draft/Publish access.
-      const supabase = createClient()
-      const [response, { data: { user } }] = await Promise.all([
-        fetch(`/api/posts/${id}`),
-        supabase.auth.getUser(),
-      ])
+      try {
+        const supabase = createClient()
+        const [response, { data: { user } }] = await Promise.all([
+          fetch(`/api/posts/${id}`),
+          supabase.auth.getUser(),
+        ])
 
-      if (!response.ok) {
-        setNotFound(true)
-        return
-      }
-
-      const data: BlogPost = await response.json()
-      setPost(data)
-
-      if (user?.email) {
-        setCurrentUser(user.email)
-        // Only grant author-level access when not in forced view mode
-        if (!viewMode) {
-          setIsAuthor(user.email === data.username)
+        // Any non-2xx (404, 5xx, etc.) — show warning + editor instead of a dead end
+        if (!response.ok) {
+          setFetchWarning(true)
+          return
         }
+
+        const data: BlogPost = await response.json()
+        setPost(data)
+
+        if (user?.email) {
+          setCurrentUser(user.email)
+          if (!viewMode) {
+            setIsAuthor(user.email === data.username)
+          }
+        }
+      } catch {
+        // Network failure (fetch itself threw — no response at all)
+        setFetchWarning(true)
       }
     }
     loadPost()
   }, [id, viewMode])
 
-  if (notFound) {
-    return (
-      <div className="max-w-4xl mx-auto py-24 px-6 text-center">
-        <div className="text-6xl mb-4 bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent font-bold">404</div>
-        <h1 className="text-2xl font-bold mb-2">Post not found</h1>
-        <p className="text-muted-foreground mb-6">The post you&apos;re looking for doesn&apos;t exist.</p>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
-        >
-          <ArrowLeft className="size-4" />
-          Back to home
-        </Link>
-      </div>
-    )
-  }
+  // ── Still loading (no post yet and no error) ──────────────────────────────
+  if (!post && !fetchWarning) return null
 
-  // Show nothing while loading from API
-  if (!post) return null
-
-  // readOnly when:
-  //   - ?mode=view is in the URL (forced view, always read-only), OR
-  //   - the user is not the author AND the post doesn't allow collaboration
-  const allowCollaboration = post.allowCollaboration ?? false
-  const readOnly = viewMode || (!isAuthor && !allowCollaboration)
+  // ── Determine access level ────────────────────────────────────────────────
+  // When the fetch failed we can't verify authorship — give full edit access
+  // so the user isn't locked out, but the warning banner makes the risk clear.
+  const allowCollaboration = post?.allowCollaboration ?? false
+  const readOnly = fetchWarning
+    ? viewMode                                         // fetch error: only viewMode restricts
+    : viewMode || (!isAuthor && !allowCollaboration)   // normal: full auth check
 
   return (
     <div className="py-10 px-6">
+
+      {/* Warning banner — shown when the post content could not be fetched */}
+      {fetchWarning && (
+        <div className="max-w-4xl mx-auto mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-500">
+          <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+          <p>
+            <strong>Content could not be fetched.</strong>{' '}
+            Modifying and saving this post will overwrite your original content.
+          </p>
+        </div>
+      )}
+
       <BlogEditor
-        postId={post.id}
-        initialTitle={post.title}
-        initialContent={post.content}
-        initialTags={post.tags}
+        postId={id}
+        initialTitle={post?.title ?? ''}
+        initialContent={post?.content ?? ''}
+        initialTags={post?.tags ?? []}
         initialAllowCollaboration={allowCollaboration}
         onPublish={(updated) => router.push(`/editor/${updated.id}`)}
         readOnly={readOnly}
-        isOwner={isAuthor}
+        isOwner={fetchWarning ? true : isAuthor}
         collaboratorName={currentUser}
       />
     </div>

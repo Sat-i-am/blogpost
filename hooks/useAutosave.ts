@@ -76,8 +76,9 @@ export function useAutosave({ postId, content, title, tags, delay = 2000, disabl
       return
     }
 
-    // Don't save in read-only mode or if there's no meaningful content
-    if (disabled || (!debouncedTitle && !debouncedContent)) return
+    // Don't save in read-only mode or if there's no meaningful content.
+    // stripHtml catches TipTap's empty state (<p></p>) which is truthy but has no real text.
+    if (disabled || (!debouncedTitle.trim() && !stripHtml(debouncedContent))) return
 
     async function save() {
       setStatus('saving')
@@ -86,7 +87,7 @@ export function useAutosave({ postId, content, title, tags, delay = 2000, disabl
       const post: BlogPost = {
         id: postId,
         title: debouncedTitle,
-        slug: uniqueSlug(debouncedTitle || 'untitled', []),  // empty array — DB handles uniqueness via @unique constraint
+        slug: `${uniqueSlug(debouncedTitle || 'untitled', [])}-${postId.slice(0, 8)}`,  // ID suffix mirrors BlogEditor.buildPost — guarantees uniqueness
         content: debouncedContent,
         markdown: htmlToMarkdown(debouncedContent),
         excerpt: stripHtml(debouncedContent).slice(0, 150),

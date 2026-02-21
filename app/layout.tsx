@@ -47,11 +47,11 @@ export default function RootLayout({
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-primary/10 py-8 mt-16 bg-gradient-to-t from-primary/5 to-transparent">
+        {/* <footer className="border-t border-primary/10 py-8 mt-16 bg-gradient-to-t from-primary/5 to-transparent">
           <div className="max-w-5xl mx-auto px-6 text-center text-sm text-muted-foreground">
             Built with <span className="text-primary font-medium">Next.js</span> & <span className="text-purple-500 font-medium">TipTap</span>
           </div>
-        </footer>
+        </footer> */}
       </body>
     </html>
   )

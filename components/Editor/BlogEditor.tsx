@@ -213,14 +213,15 @@ export default function BlogEditor({
   // Autosave — debounces content/title and saves via API every 2s
   const { status } = useAutosave({ postId: id, content, title, tags, disabled: readOnly })
 
-  // AI summary side panel
+  // AI summary + chat side panel
   const {
     open: summaryOpen,
     handleOpen: openSummary,
     handleClose: closeSummary,
-    summary,
-    loading: summaryLoading,
+    messages: summaryMessages,
+    streaming: summaryStreaming,
     error: summaryError,
+    sendQuestion,
   } = useSummarize(htmlToMarkdown(content))
 
   /**
@@ -232,7 +233,7 @@ export default function BlogEditor({
     return {
       id,
       title,
-      slug: uniqueSlug(title || 'untitled', []),  // empty array — DB handles uniqueness via @unique constraint
+      slug: `${uniqueSlug(title || 'untitled', [])}-${id.slice(0, 8)}`,  // ID suffix guarantees uniqueness across posts with identical titles
       content,
       markdown: htmlToMarkdown(content),
       excerpt: stripHtml(content).slice(0, 150),
@@ -279,7 +280,7 @@ export default function BlogEditor({
   }
 
   async function generateAiTags() {
-    if (!content) return
+    if (!stripHtml(content)) return
     setGeneratingTags(true)
     try {
       const res = await fetch('/api/ai/tags', {
@@ -466,7 +467,8 @@ export default function BlogEditor({
               />
               <button
                 onClick={generateAiTags}
-                disabled={generatingTags}
+                disabled={generatingTags || !stripHtml(content)}
+                title={!stripHtml(content) ? 'Add content to the blog first' : undefined}
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border border-primary/20 hover:bg-primary/10 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
               >
                 {generatingTags ? <Loader2 className="size-3 animate-spin" /> : null}
@@ -499,9 +501,10 @@ export default function BlogEditor({
         >
           <SummarizePanel
             onClose={closeSummary}
-            summary={summary}
-            loading={summaryLoading}
+            messages={summaryMessages}
+            streaming={summaryStreaming}
             error={summaryError}
+            onSend={sendQuestion}
           />
         </div>
 

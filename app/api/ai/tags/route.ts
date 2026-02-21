@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      max_tokens: 100,
+      max_tokens: 100, //max_tokens: 100 — ["react","hooks","performance","nextjs","typescript"] is ~20 tokens. 100 is a safe ceiling.
       messages: [
         {
           role: 'user',

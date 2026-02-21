@@ -1,4 +1,4 @@
-export const maxDuration = 30  // seconds — tells Vercel to allow up to 30s for this route
+export const maxDuration = 30
 
 import { openai } from '@/lib/openai'
 import { checkDailyLimit, trackUsage } from '@/lib/aiUsage'
@@ -6,8 +6,6 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
-  // Auth and limit checks must happen BEFORE streaming starts —
-  // once we return a ReadableStream we can no longer send JSON error responses.
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user?.email) {
@@ -20,23 +18,26 @@ export async function POST(request: NextRequest) {
     if (error.message === 'DAILY_LIMIT_EXCEEDED') {
       return Response.json({ error: 'Daily AI limit reached. Try again tomorrow.' }, { status: 429 })
     }
-    return Response.json({ error: 'Failed to generate summary' }, { status: 500 })
+    return Response.json({ error: 'Failed to get response' }, { status: 500 })
   }
 
-  const { markdown } = await request.json()
+  const { markdown, messages } = await request.json()
   const username = user.email
 
   const stream = await openai.chat.completions.create({
     model: 'gpt-5-mini',
-    max_completion_tokens: 800, //max_tokens for summary output 500 is enough for 100-200 words
+    max_completion_tokens: 800, //max_tokens: 500 — 100 words answer=> 800 tokens is a safe ceiling.
     stream: true,
-    // Asks OpenAI to include token usage in the final chunk so we can track it
     stream_options: { include_usage: true },
     messages: [
       {
-        role: 'user',
-        content: `Summarize this blog post in maximum 100-200 words summary. Focus on the key ideas and takeaways. Return plain text add some bullet points wherever necessary.\n\nPost content:\n${markdown.slice(0, 5000)}`,
+        role: 'system',
+        content: `You are a helpful assistant answering questions about a blog post, try to keep it in brief. Always try to make the answer more accurate by adding something from general aspect and try to use blog references as examples, if you think you can add something to make the answer more comprehensive and better then feel free to add it.\n\nBlog content:\n${markdown.slice(0, 5000)}`, //only giving first 5000 words if the content is very large
       },
+      ...messages.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content,
+      })),
     ],
   })
 
@@ -46,12 +47,10 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       try {
         for await (const chunk of stream) {
-          // Each chunk carries a text delta — push it to the response stream immediately
           const text = chunk.choices[0]?.delta?.content || ''
           if (text) {
             controller.enqueue(encoder.encode(text))
           }
-          // The last chunk (after all text) carries usage when stream_options.include_usage is set
           if (chunk.usage) {
             await trackUsage(username, chunk.usage.total_tokens)
           }

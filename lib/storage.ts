@@ -105,7 +105,7 @@ export const storage = {
       },
       update:{
         title:post.title,
-        slug:post.slug,
+        // slug intentionally omitted — set once at creation, never changed (stable URLs)
         content:post.content,
         markdown:post.markdown,
         excerpt:post.excerpt,
