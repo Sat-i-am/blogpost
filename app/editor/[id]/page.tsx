@@ -67,8 +67,8 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   // so the user isn't locked out, but the warning banner makes the risk clear.
   const allowCollaboration = post?.allowCollaboration ?? false
   const readOnly = fetchWarning
-    ? viewMode                                         // fetch error: only viewMode restricts
-    : viewMode || (!isAuthor && !allowCollaboration)   // normal: full auth check
+    ? viewMode                                     
+    : viewMode || (!isAuthor && !allowCollaboration)   // 
 
   return (
     <div className="py-10 px-6">

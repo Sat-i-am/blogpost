@@ -38,7 +38,7 @@ function formatDate(iso: string): string {
 }
 
 export default function PostCard({ post, currentUserEmail }: PostCardProps) {
-  const canEdit = post.allowCollaboration || post.username === currentUserEmail
+  const canEdit = post.allowCollaboration || post.username === currentUserEmail //edit is allowed if the post is published in public edit mode or the user is the author
   return (
     <div className="h-full border border-border/80 rounded-xl p-6 bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 group flex flex-col">
       {/* Tags */}
@@ -87,15 +87,15 @@ export default function PostCard({ post, currentUserEmail }: PostCardProps) {
 
       {/* Action buttons */}
       <div className="flex gap-2">
-        <Link
-          href={`/editor/${post.id}?mode=view`}
+        <Link 
+          href={`/editor/${post.id}?mode=view`} //view mode is read only
           className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg hover:bg-muted transition-colors"
         >
           <Eye className="size-3.5" />
           View
         </Link>
         {canEdit ? (
-          <Link
+          <Link //edit mode is read write
             href={`/editor/${post.id}`}
             className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg hover:bg-muted transition-colors"
           >
