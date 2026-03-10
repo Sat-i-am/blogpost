@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    //first checking the daily limit
     await checkDailyLimit(user.email)
   } catch (error: any) {
     if (error.message === 'DAILY_LIMIT_EXCEEDED') {
@@ -40,13 +41,22 @@ export async function POST(request: NextRequest) {
       })),
     ],
   })
+  //now this stream is async iterable and we can use for await loop to consume it
+  // An Async Iterable is something that produces values over time asynchronously.
+  // Examples:
+  // 1. AI tokens
+  // 2. File download chunks
+  // 3. Video frames
+  // 4. Websocket messages
+  // Instead of giving all data at once, it yields values gradually.
 
   const encoder = new TextEncoder()
 
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of stream) {
+        for await (const chunk of stream) { //The loop pauses until the next value arrives.
+          // Each chunk carries a text delta — push it to the response stream immediately
           const text = chunk.choices[0]?.delta?.content || ''
           if (text) {
             controller.enqueue(encoder.encode(text))

@@ -29,7 +29,8 @@ import { useAutosave } from '@/hooks/useAutosave'
 import { htmlToMarkdown } from '@/lib/markdown'
 import { uniqueSlug } from '@/lib/slugify'
 import { BlogPost } from '@/lib/types'
-import SummarizeButton, { SummarizePanel, useSummarize } from '@/components/SummarizeButton'
+import SummarizeButton, { useSummarize } from '@/components/SummarizeButton'
+import SummarizePanel from '@/components/SummarizePanel'
 import * as Y from 'yjs'
 import { HocuspocusProvider } from '@hocuspocus/provider'
 import Collaboration from '@tiptap/extension-collaboration'
@@ -59,9 +60,9 @@ function stripHtml(html: string): string {
 
 export default function BlogEditor({
   postId,
-  initialContent = '',
-  initialTitle = '',
-  initialTags = [],
+  initialContent = '', //these act as fallback if initialContent is not provided
+  initialTitle = '', //these act as fallback if initialTitle is not provided
+  initialTags = [], //these act as fallback if initialTags is not provided
   onPublish,
   onDraft,
   readOnly = false,
@@ -129,7 +130,7 @@ export default function BlogEditor({
 
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null)
 
-  useEffect(() => {
+  useEffect(() => { //This opens a WebSocket connection to the HocusPocus server running at NEXT_PUBLIC_COLLAB_WS_URL.
     const p = new HocuspocusProvider({
       url: process.env.NEXT_PUBLIC_COLLAB_WS_URL || "ws://localhost:1234",
       name: id,
@@ -183,7 +184,7 @@ export default function BlogEditor({
   // applying remote updates — those bypass the editable check entirely.
   useEffect(() => {
     if (editor) {
-      editor.setEditable(!readOnly)
+      editor.setEditable(!readOnly) //setEditable property controls whether the editor is editable or not
     }
   }, [editor, readOnly])
 
@@ -197,7 +198,7 @@ export default function BlogEditor({
     const handleSync = () => {
       // Check if Yjs doc is empty (first time this post is opened collaboratively)
       const yXmlFragment = ydoc.getXmlFragment('default')
-      if (yXmlFragment.length === 0 && initialContent) {
+      if (yXmlFragment.length === 0 && initialContent) { //if the yjs document is empty and initialContent is provided,means something is wrong in fetching the yjsstate from the hocuspocus server so set the initialContent(which is html) to the editor
         editor.commands.setContent(initialContent)
       }
     }
@@ -207,7 +208,7 @@ export default function BlogEditor({
     if (provider.isSynced) {
       handleSync()
     } else {
-      provider.on('synced', handleSync)
+      provider.on('synced', handleSync)  // "hey provider, whenever you emit 'synced', call this callback"
     }
 
     return () => {
