@@ -1,3 +1,5 @@
+"use client"
+
 /**
  * Tag filter chips for the blog feed.
  *
