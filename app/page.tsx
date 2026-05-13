@@ -46,9 +46,14 @@ export default function HomePage() {
    */
   useEffect(() => {
     async function loadPosts(){
-      const res = await fetch('/api/posts');
-      const data = await res.json();
-      setPosts(data);
+      try {
+        const res = await fetch('/api/posts');
+        if (!res.ok) throw new Error('Failed to fetch posts');
+        const data = await res.json();
+        setPosts(data);
+      } catch (error) {
+        console.error('Failed to load posts:', error);
+      }
     }
     loadPosts()
 
