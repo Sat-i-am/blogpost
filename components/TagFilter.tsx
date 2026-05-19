@@ -1,4 +1,6 @@
 "use client"
+// "use client" is required because the buttons use onClick event handlers.
+// Even though this component has no useState, event handlers can't run on the server.
 
 /**
  * Tag filter chips for the blog feed.
